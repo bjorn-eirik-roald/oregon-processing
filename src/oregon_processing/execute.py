@@ -1,33 +1,52 @@
-from oregon_processing.commands import get_database_status
-from oregon_processing.commands.create_project import create_project
-from oregon_processing.commands.open_terminal import open_terminal
-from oregon_processing.commands.run_export_protocol import run_export_protocol
-from oregon_processing.commands.get_database_status import get_database_status
+# Lazy-loaded commands: maps command name to module path
+_COMMAND_MODULES = {
+    "create_project": "oregon_processing.commands.create_project",
+    "open_terminal": "oregon_processing.commands.open_terminal",
+    "run_export_protocol": "oregon_processing.commands.run_export_protocol",
+    "get_database_status": "oregon_processing.commands.get_database_status",
+}
+
+_COMMAND_CACHE = {}
+
 import argparse
 import sys
+import importlib
+
+def _get_command(command_name: str):
+    """Lazily import and cache a command function."""
+    if command_name not in _COMMAND_CACHE:
+        module_path = _COMMAND_MODULES[command_name]
+        module = importlib.import_module(module_path)
+        _COMMAND_CACHE[command_name] = getattr(module, command_name)
+    return _COMMAND_CACHE[command_name]
+
+def _check_package_installed() -> bool:
+    package_name = "oregon_processing"
+    try:
+        importlib.import_module(package_name)
+        return True
+    except ImportError:
+        print(
+            f"\n\nThe package '{package_name}' is not installed correctly. Run setup.cmd and try again.\n\n",
+            file=sys.stderr,
+        )
+        return False
 
 def main():
-    commands = {
-        "create_project": create_project,
-        "open_terminal": open_terminal,
-        "run_export_protocol": run_export_protocol,
-        "get_database_status": get_database_status
-    }
-    parser = argparse.ArgumentParser(description="Execute a Oregon-Processing command.")
+
+    if not _check_package_installed():
+        return 1
+
+    parser = argparse.ArgumentParser(description="Execute a command.")
     parser.add_argument(
         "command",
-        choices=commands.keys(),
+        choices=_COMMAND_MODULES.keys(),
         help="The name of the command to execute. Choices: %(choices)s"
     )
     args = parser.parse_args()
 
-    command = args.command
-    if command not in commands:
-        print(f"Invalid command: {command}")
-        parser.print_help()
-        return 1
-
-    command_func = commands[command]
+    command_name = args.command
+    command_func = _get_command(command_name)
     result = command_func()
     return result if isinstance(result, int) else 0
 
