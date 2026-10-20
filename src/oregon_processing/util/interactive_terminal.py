@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Interactive Terminal for Oregon RFID Device
-
-Provides a command-line interface for sending commands to the Oregon device
-and receiving responses.
-"""
-
+from oregon_processing.util.communication import is_valid_command
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
@@ -19,16 +12,16 @@ except ImportError:
 class InteractiveTerminal:
     """Interactive terminal for sending commands to Oregon RFID device."""
 
-    def __init__(self, command_manager):
+    def __init__(self, session):
         """
         Initialize the interactive terminal.
 
         Parameters
         ----------
-        command_manager : CommandManager
-            CommandManager instance for sending commands to device.
+        session : ConnectionSession
+            Connection session instance for sending commands to device.
         """
-        self._command_manager = command_manager
+        self._session = session
 
     def run(self):
         """
@@ -43,7 +36,7 @@ class InteractiveTerminal:
 
         try:
             while True:
-                prompt = f"\n{self._command_manager.prompt_signature or ''}>> "
+                prompt = f"\n{self._session.prompt_prefix or ''}>> "
                 cmd = input(prompt).strip()
                 if not cmd:
                     continue
@@ -54,13 +47,13 @@ class InteractiveTerminal:
                     break
 
                 # Validate command format
-                if not self._command_manager.validate_command(cmd):
+                if not is_valid_command(cmd):
                     LOGGER.warning("Invalid command. Use a two-letter code followed by a space (e.g., 'SY ').")
-                    LOGGER.info(f"Valid codes: {sorted(self._command_manager.VALID_MAIN_COMMANDS)}")
+                    LOGGER.info(f"Valid codes: {sorted(self._session.VALID_COMMANDS)}")
                     continue
 
                 # send command and get cleaned response
-                lines = self._command_manager.send_command(cmd)
+                lines = self._session.send_raw_command(cmd)
                 if lines:
                     LOGGER.info("Response:\n"+"\n".join(lines))
                 else:

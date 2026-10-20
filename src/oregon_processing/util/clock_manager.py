@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Oregon RFID Clock Manager - Handles device date/time operations
-"""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -13,9 +8,10 @@ from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
 from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
+from oregon_processing.util.communication import DeviceCommand
 
 if TYPE_CHECKING:
-    from oregon_processing.util.command_manager import CommandManager
+    from oregon_processing.util.communication import ConnectionSession
 
 
 @dataclass
@@ -63,17 +59,17 @@ class ClockManager:
         'e': "Elapsed time since power-up"
     }
 
-    def __init__(self, command_manager: CommandManager):
+    def __init__(self, session: ConnectionSession):
         """
         Initialize ClockManager.
 
         Parameters
         ----------
-        command_manager : CommandManager
-            CommandManager instance for sending commands to device.
+        session : ConnectionSession
+            Connection session instance for sending commands to device.
         """
 
-        self._command_manager = command_manager
+        self._session = session
 
     def control_device_datetime(self, tolerance_time_diff: int = 15, attempt_sync: bool = True) -> ClockCheckResult:
         """
@@ -272,13 +268,13 @@ class ClockManager:
 
 
         LOGGER.debug("Setting device timezone to UTC.")
-        self._command_manager.send_command("TZ 0")
+        self._session.send_command(DeviceCommand.TZ0)
         LOGGER.info(f"Device timezone set to UTC.")
 
         LOGGER.debug(f"Setting device time to {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC.")
         computer_datetime_utc = datetime.now().astimezone(timezone.utc)
-        dt_command = computer_datetime_utc.strftime("DT %Y-%m-%d %H:%M:%S")
-        response_lines = self._command_manager.send_command(dt_command)
+        dt_argument = computer_datetime_utc.strftime("%Y-%m-%d %H:%M:%S")
+        response_lines = self._session.send_command(DeviceCommand.DT, dt_argument)
 
         if len(response_lines) == 0:
             error_message = "No response received after sending DT command."
@@ -291,7 +287,7 @@ class ClockManager:
 
     def _send_dt_command(self) -> str:
         try:
-            lines = self._command_manager.send_command("DT")
+            lines = self._session.send_command(DeviceCommand.DT)
         except Exception as e:
             error_message = f"Failed to send DT command: {e}"
             LOGGER.error(error_message)
@@ -451,7 +447,7 @@ class ClockManager:
 
     def _send_tz_command(self) -> str:
         try:
-            lines = self._command_manager.send_command("TZ")
+            lines = self._session.send_command(DeviceCommand.TZ)
         except Exception as e:
             error_message = f"Failed to send TZ command: {e}"
             LOGGER.error(error_message)

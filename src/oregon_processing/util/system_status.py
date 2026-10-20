@@ -1,4 +1,4 @@
-from oregon_processing.util.command_manager import CommandManager
+from oregon_processing.util.communication import ConnectionSession, DeviceCommand
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
@@ -137,14 +137,14 @@ class SystemStatus:
 class SystemStatusChecker:
     """Class to check system status and prerequisites for Oregon RFID processing."""
 
-    def __init__(self, command_manager: CommandManager):
-        self._command_manager: CommandManager = command_manager
+    def __init__(self, session: ConnectionSession):
+        self._session: ConnectionSession = session
 
         self._ignored_lines: list[str] = []
 
     def get_system_status(self) -> SystemStatus:
 
-        status_lines = self._command_manager.send_command("SY")
+        status_lines = self._session.send_command(DeviceCommand.SY)
 
         status = SystemStatus()  # create empty SystemStatus
 

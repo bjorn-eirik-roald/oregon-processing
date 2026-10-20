@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Health Manager - Manages system health checks for Oregon RFID device.
-
-Provides methods for checking device health status, including supply voltage
-and other system parameters.
-"""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -18,7 +10,7 @@ from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from oregon_processing.util.command_manager import CommandManager
+    from oregon_processing.util.communication import ConnectionSession
     from oregon_processing.util.system_status import FirmwareVersion, SystemStatus, SystemStatusChecker
 
 
@@ -37,20 +29,20 @@ class DeviceHealthChecker:
     CRITICAL_VOLTAGE_THRESHOLD = 12.5
     OLD_VERSION_THRESHOLD = 2.74
 
-    def __init__(self, command_manager: CommandManager, system_status_checker: SystemStatusChecker):
+    def __init__(self, session: ConnectionSession, system_status_checker: SystemStatusChecker):
         """
         Initialize DeviceHealthChecker.
 
         Parameters
         ----------
-        command_manager : CommandManager
-            CommandManager instance for managing device commands.
+        session : ConnectionSession
+            Connection session instance for managing device commands.
         system_status_checker : SystemStatusChecker
             SystemStatusChecker instance for checking system status.
         """
 
         self._system_status_checker = system_status_checker
-        self._command_manager = command_manager
+        self._session = session
 
     def check_device_health(self) -> DeviceHealthReport:
         """
@@ -69,12 +61,12 @@ class DeviceHealthChecker:
         non_critical_warnings = []
 
         system_status: SystemStatus = self._system_status_checker.get_system_status()
-        prompt_signature = self._command_manager.prompt_signature
+        prompt_prefix = self._session.prompt_prefix
 
         # Check time synchronization status based on prompt signature (3rd character should be 'G' for GNSS sync)
-        if prompt_signature[2] != 'G':
+        if prompt_prefix[2] != 'G':
             non_critical_warnings.append(
-                f"Device time is not synchronized to GNSS signals (current state: '{prompt_signature[2]}')"
+                f"Device time is not synchronized to GNSS signals (current state: '{prompt_prefix[2]}')"
             )
 
         # Check firmware version

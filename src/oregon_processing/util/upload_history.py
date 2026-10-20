@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from oregon_processing.util.command_manager import CommandManager
+from oregon_processing.util.communication import ConnectionSession, DeviceCommand
 from oregon_processing.exceptions import UnexpectedResponseError
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
@@ -33,9 +33,9 @@ class UploadHistory:
 
 class UploadHistoryChecker:
 
-    def __init__(self, command_manager: CommandManager, mode_manager: DeviceModeManager):
+    def __init__(self, session: ConnectionSession, mode_manager: DeviceModeManager):
 
-        self._command_manager = command_manager
+        self._session = session
         self._mode_manager = mode_manager
 
     def get_upload_history(self) -> UploadHistory:
@@ -55,7 +55,7 @@ class UploadHistoryChecker:
             old_mode = mode
             self.change_mode('Standby')
 
-        upload_history_lines = self._command_manager.send_command("UH")
+        upload_history_lines = self._session.send_command(DeviceCommand.UH)
 
         if old_mode:
             self.change_mode(old_mode)

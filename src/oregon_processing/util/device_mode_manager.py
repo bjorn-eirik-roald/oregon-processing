@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Device Mode Manager for Oregon RFID
-"""
-
-
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from oregon_processing.exceptions import ModeChangeError
 from oregon_processing.util.logging_manager import get_logger
+from oregon_processing.util.communication import DeviceCommand
 
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from oregon_processing.util.command_manager import CommandManager
+    from oregon_processing.util.communication import ConnectionSession
     from oregon_processing.util.system_status import SystemStatus, SystemStatusChecker
 
 
@@ -21,26 +16,26 @@ class DeviceModeManager:
     """Manages device operating modes (Standby, Run, Sleep)."""
 
     MODES = {
-        'standby': {'display': 'Standby', 'command': 'ST'},
-        'run': {'display': 'Run', 'command': 'ON'},
-        'sleep': {'display': 'Sleep', 'command': 'OF'},
-        'Standby': {'display': 'Standby', 'command': 'ST'},
-        'Run': {'display': 'Run', 'command': 'ON'},
-        'Sleep': {'display': 'Sleep', 'command': 'OF'}
+        'standby': {'display': 'Standby', 'command': DeviceCommand.ST},
+        'run': {'display': 'Run', 'command': DeviceCommand.ON},
+        'sleep': {'display': 'Sleep', 'command': DeviceCommand.OF},
+        'Standby': {'display': 'Standby', 'command': DeviceCommand.ST},
+        'Run': {'display': 'Run', 'command': DeviceCommand.ON},
+        'Sleep': {'display': 'Sleep', 'command': DeviceCommand.OF}
     }
-    def __init__(self, command_manager: CommandManager, status_checker: SystemStatusChecker):
+    def __init__(self, session: ConnectionSession, status_checker: SystemStatusChecker):
         """
         Initialize DeviceModeManager with command manager and status checker.
 
         Parameters
         ----------
-        command_manager : CommandManager
-            Command manager instance for sending commands to device.
+        session : ConnectionSession
+            Connection session instance for sending commands to device.
         status_checker : SystemStatusChecker
             Status checker instance for retrieving system status.
         """
 
-        self._command_manager = command_manager
+        self._session = session
         self._status_checker = status_checker
         self._startup_mode = None
 
@@ -92,12 +87,12 @@ class DeviceModeManager:
             LOGGER.error(error_message)
             raise ValueError(error_message)
 
-        command = self.MODES[mode_name]['command']
+        command: DeviceCommand = self.MODES[mode_name]['command']
 
         current_mode = self.get_current_mode()
         if current_mode != mode_name:
             LOGGER.debug(f"Changing device mode from '{current_mode}' to '{mode_name}' (sending {command} command).")
-            self._command_manager.send_command(command)
+            self._session.send_command(command)
             if self.get_current_mode().lower() == mode_name.lower():
                 LOGGER.debug(f"Device mode changed from '{current_mode}' to '{mode_name}'.")
             else:
@@ -138,5 +133,3 @@ class DeviceModeManager:
         """
         status: SystemStatus = self._status_checker.get_system_status()
         return status.mode
-
-

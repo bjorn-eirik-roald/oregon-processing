@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Data Exporter for Oregon RFID device data
-"""
-
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -16,10 +11,11 @@ LOGGER = get_logger(__name__)
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 from oregon_processing.util.system_status import SystemStatus, SystemStatusChecker
 from oregon_processing.util.upload_history import UploadHistory, UploadHistoryChecker
+from oregon_processing.util.communication import DeviceCommand
 
 if TYPE_CHECKING:
     from oregon_processing.util.format_manager import FormatManager
-    from oregon_processing.util.command_manager import CommandManager
+    from oregon_processing.util.communication import ConnectionSession
 
 
 class DataExporter:
@@ -27,7 +23,7 @@ class DataExporter:
 
     DEFAULT_DETECTION_RECORD_FORMAT = {'ORSR':'DTY ARR SPC TRF DUR SPC TTY SPC TAG SCD NCD EFA LON LAT',
                                        'ORMR':'DTY ARR SPC TRF DUR SPC TTY SPC ANT TAG SCD NCD EFA LON LAT'}
-    def __init__(self, command_manager: CommandManager, format_manager: FormatManager,
+    def __init__(self, session: ConnectionSession, format_manager: FormatManager,
                  upload_history_checker: UploadHistoryChecker, mode_manager: DeviceModeManager,
                  system_status_checker: SystemStatusChecker):
         """
@@ -37,8 +33,8 @@ class DataExporter:
         ----------
         format_manager : FormatManager
             Format manager instance for handling detection record format operations.
-        command_manager : CommandManager
-            Command manager instance for sending commands to device.
+        session : ConnectionSession
+            Connection session instance for sending commands to device.
         upload_history_checker : UploadHistoryChecker
             Upload history checker instance for managing upload history.
         mode_manager : DeviceModeManager
@@ -48,7 +44,7 @@ class DataExporter:
         """
 
         self._format_manager: FormatManager = format_manager
-        self._command_manager: CommandManager = command_manager
+        self._session: ConnectionSession = session
         self._upload_history_checker: UploadHistoryChecker = upload_history_checker
         self._mode_manager: DeviceModeManager = mode_manager
         self._system_status_checker: SystemStatusChecker = system_status_checker
@@ -110,8 +106,8 @@ class DataExporter:
             try:
                 success = True
                 # Send ER command with date
-                command = f"ER {current_date.strftime('%Y-%m-%d')}"
-                response = self._command_manager.send_command(command)
+                command_argument = current_date.strftime('%Y-%m-%d')
+                response = self._session.send_command(DeviceCommand.ER, command_argument)
             except Exception as e:
                 message += f" Failed to export. {e}"
 
@@ -215,7 +211,7 @@ class DataExporter:
         LOGGER.info(f"Requesting all ({total_number_of_records}) records from device. This may take a while if there are many records on the device. Please wait...")
 
         try:
-            response = self._command_manager.send_command("UP*")
+            response = self._session.send_command(DeviceCommand.UP_ALL)
         except Exception as e:
             LOGGER.error(f"Failed to retrieve records from device: {e}")
             return False
@@ -429,5 +425,3 @@ class DataExporter:
         # This is acceptable - some records may not have all fields (e.g., HDP)
 
         return parts
-
-

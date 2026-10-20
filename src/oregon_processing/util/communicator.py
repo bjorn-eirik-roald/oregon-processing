@@ -1,28 +1,20 @@
-# -*- coding: utf-8 -*-
-"""
-Oregon RFID Communicator
-"""
-
 from contextlib import ExitStack
 
 from pathlib import Path
-from serial import Serial
 
-from oregon_processing.util.connector import ConnectionResult, Connector
-from oregon_processing.util.command_manager import CommandManager
+from oregon_processing.util.connector import ConnectionResult, connect
+from oregon_processing.util.communication import ConnectionSession
 from oregon_processing.util.clock_manager import ClockCheckResult, ClockManager
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 from oregon_processing.util.interactive_terminal import InteractiveTerminal
 from oregon_processing.util.format_manager import FormatManager
 from oregon_processing.util.data_exporter import DataExporter
 from oregon_processing.util.device_health_checker import DeviceHealthChecker, DeviceHealthReport
-from oregon_processing.util.logging_manager import get_logger
-LOGGER = get_logger(__name__)
-
 from oregon_processing.util.system_status import SystemStatusChecker, SystemStatus
 from oregon_processing.util.upload_history import UploadHistoryChecker, UploadHistory
-
-from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
 
 
 class Communicator:
@@ -30,11 +22,10 @@ class Communicator:
 
     def __init__(self):
 
-        self._connection = None
-
         self._exit_stack = None
 
-        self._command_manager: CommandManager = None
+        self._session: ConnectionSession = None
+
         self._mode_manager: DeviceModeManager = None
         self._system_status_checker: SystemStatusChecker = None
         self._clock_manager: ClockManager = None
@@ -56,24 +47,23 @@ class Communicator:
 
         connection_result = None
         try:
-            connector = Connector()
-            connection_result: ConnectionResult = connector.connect()
+            connection_result: ConnectionResult = connect()
 
             if connection_result and connection_result.success:
-                self._connection: Serial  = connection_result.connection
 
-                # Command manager and system status checker needed already in post-connect handshake
-                self._command_manager = CommandManager(self._connection)
-                self._system_status_checker = SystemStatusChecker(self._command_manager)
+                self._session = self._exit_stack.enter_context(connection_result.session)
 
+
+
+                self._system_status_checker = SystemStatusChecker(self._session)
                 self._post_connect_handshake()
 
-                self._mode_manager = self._exit_stack.enter_context(DeviceModeManager(self._command_manager, self._system_status_checker))
-                self._format_manager = self._exit_stack.enter_context(FormatManager(self._command_manager, self._mode_manager))
-                self._upload_history_checker = UploadHistoryChecker(self._command_manager, self._mode_manager)
-                self._data_exporter = DataExporter(self._command_manager, self._format_manager, self._upload_history_checker, self._mode_manager, self._system_status_checker)
-                self._clock_manager = ClockManager(self._command_manager)
-                self._health_checker = DeviceHealthChecker(self._command_manager, self._system_status_checker)
+                self._mode_manager = self._exit_stack.enter_context(DeviceModeManager(self._session, self._system_status_checker))
+                self._format_manager = self._exit_stack.enter_context(FormatManager(self._session, self._mode_manager))
+                self._upload_history_checker = UploadHistoryChecker(self._session, self._mode_manager)
+                self._data_exporter = DataExporter(self._session, self._format_manager, self._upload_history_checker, self._mode_manager, self._system_status_checker)
+                self._clock_manager = ClockManager(self._session)
+                self._health_checker = DeviceHealthChecker(self._session, self._system_status_checker)
 
             else:
                 error_message = f"Failed to connect to Oregon device."
@@ -82,11 +72,13 @@ class Communicator:
 
         # catch exceptions where logging is already made and reraise after closing exit stack
         except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError) as e:
-            self._exit_stack.close()
+            if self._exit_stack:
+                self._exit_stack.close()
             raise
         except Exception as e:
             LOGGER.exception("Failed to initialize Communicator")
-            self._exit_stack.close()
+            if self._exit_stack:
+                self._exit_stack.close()
             raise
 
         return self
@@ -95,12 +87,13 @@ class Communicator:
         """Ensure all managers and connection are properly cleaned up."""
         if self._exit_stack:
             return self._exit_stack.__exit__(exc_type, exc_value, traceback)
-        return False
+        if self._session:
+            self._session.close()
 
     @property
     def is_connected(self):
         """Check if there is an active connection."""
-        return self._connection is not None
+        return self._session is not None
 
     def check_device_health(self):
         """
@@ -131,12 +124,12 @@ class Communicator:
         """
 
 
-        if not self._connection:
+        if not self._session.is_connected:
             error_message = "Not connected to device. Cannot start interactive terminal."
             LOGGER.error(error_message)
             raise ConnectionError(error_message)
 
-        terminal = InteractiveTerminal(self._command_manager)
+        terminal = InteractiveTerminal(self._session)
         terminal.run()
 
         LOGGER.info("Interactive terminal session ended.")
@@ -162,12 +155,12 @@ class Communicator:
             Parsed upload history with upload records and metadata.
         """
 
-        if not self._command_manager:
-            error_message = "Command manager not initialized. Cannot retrieve upload history."
+        if not self._session:
+            error_message = "Connection session not initialized. Cannot retrieve upload history."
             LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
-        if not self._connection:
+        if not self._session.is_connected:
             error_message = "Not connected to device. Cannot retrieve upload history."
             LOGGER.error(error_message)
             raise ConnectionError(error_message)
@@ -271,6 +264,3 @@ class Communicator:
         device_type = system_status.device_type
 
         LOGGER.info(f"Connected to device '{reader_name}' of type '{device_type}' with serial number '{serial_number}'.")
-
-
-

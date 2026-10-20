@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Format Manager for Oregon RFID device record format operations
-"""
-
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.command_manager import CommandManager
+from oregon_processing.util.communication import ConnectionSession, DeviceCommand
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 from oregon_processing.exceptions import UnexpectedResponseError
 
@@ -47,19 +42,19 @@ class FormatManager:
         'SPC': 'Output one space character',
         }
 
-    def __init__(self, command_manager: CommandManager, mode_manager: DeviceModeManager):
+    def __init__(self, session: ConnectionSession, mode_manager: DeviceModeManager):
         """
         Initialize FormatManager.
 
         Parameters
         ----------
-        command_manager : CommandManager
-            CommandManager instance for sending commands to device.
+        session : ConnectionSession
+            Connection session instance for sending commands to device.
         mode_manager : DeviceModeManager
             DeviceModeManager instance for managing device modes.
         """
 
-        self._command_manager = command_manager
+        self._session = session
         self._mode_manager = mode_manager
 
         self._detection_record_format = None
@@ -111,8 +106,7 @@ class FormatManager:
         """
 
         try:
-            fm_command = f"FM {format_string}"
-            self._command_manager.send_command(fm_command)
+            self._session.send_command(DeviceCommand.FM, format_string)
 
             # Verify the format was set and update cache
             self._detection_record_format = self._fetch_detection_record_format()
@@ -147,7 +141,7 @@ class FormatManager:
             old_mode = mode
             self._mode_manager.change_mode('Standby')
 
-        response_lines = self._command_manager.send_command("FM")
+        response_lines = self._session.send_command(DeviceCommand.FM)
 
         if old_mode:
             self._mode_manager.change_mode(old_mode)
@@ -208,4 +202,3 @@ class FormatManager:
             LOGGER.info("Original detection record format restored.")
 
         return success
-
