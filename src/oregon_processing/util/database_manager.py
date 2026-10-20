@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.communicator import Communicator
 from oregon_processing.util.project import Project
 from oregon_processing.util.util_functions import extract_filename_date
@@ -29,7 +31,6 @@ class DatabaseManager:
         project : Project
             Project instance for data directory
         """
-        self._logger = get_logger(__name__)
 
         self._project = project
 
@@ -58,17 +59,17 @@ class DatabaseManager:
     def prepare_directories(self, serial_number: str) -> None:
         """Prepare and create necessary directories for export."""
 
-        self._logger.debug("Preparing output directories.")
+        LOGGER.debug("Preparing output directories.")
 
         # Define directories based on project directories and device serial number
         self._define_serial_number_directories(serial_number)
 
-        self._logger.info(f"Project directory: {self._project.project_dir}", extra={"_skip_path_alias_filter": True})
-        self._logger.debug(f"Root Export data directory: {self._project.export_dir}")
-        self._logger.debug(f"Detection records directory: {self._project.detection_record_export_dir}")
-        self._logger.debug(f"Event records directory: {self._project.event_record_export_dir}")
-        self._logger.debug(f"Export logs directory: {self._project.logs_dir}")
-        self._logger.debug(f"Crash logs directory: {self._project.crash_logs_dir}")
+        LOGGER.info(f"Project directory: {self._project.project_dir}", extra={"_skip_path_alias_filter": True})
+        LOGGER.debug(f"Root Export data directory: {self._project.export_dir}")
+        LOGGER.debug(f"Detection records directory: {self._project.detection_record_export_dir}")
+        LOGGER.debug(f"Event records directory: {self._project.event_record_export_dir}")
+        LOGGER.debug(f"Export logs directory: {self._project.logs_dir}")
+        LOGGER.debug(f"Crash logs directory: {self._project.crash_logs_dir}")
 
 
         # Create all directories
@@ -83,7 +84,7 @@ class DatabaseManager:
         for dir_path, dir_name in directories:
             if not dir_path.exists():
                 warning_message = f"{dir_name} directory was missing from: {dir_path}\nCreating directory..."
-                self._logger.warning(warning_message)
+                LOGGER.warning(warning_message)
                 dir_path.mkdir(parents=True, exist_ok=True)
 
     def get_export_dates(self) -> dict:
@@ -101,21 +102,21 @@ class DatabaseManager:
 
         if self._detection_records_dir is None or self._event_records_dir is None:
             error_message = f"Directories not prepared yet. Call prepare_directories() first."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
-        self._logger.debug("Scanning for existing detection record files...")
+        LOGGER.debug("Scanning for existing detection record files...")
         detection_record_files = list(self._detection_records_dir.glob("*.txt"))
-        self._logger.debug(f"Found {len(detection_record_files)} detection record file(s) from current RFID reader.")
+        LOGGER.debug(f"Found {len(detection_record_files)} detection record file(s) from current RFID reader.")
 
-        self._logger.debug("Scanning for existing event record files...")
+        LOGGER.debug("Scanning for existing event record files...")
         event_record_files = list(self._event_records_dir.glob("*.txt"))
-        self._logger.debug(f"Found {len(event_record_files)} event record file(s) from current RFID reader.")
+        LOGGER.debug(f"Found {len(event_record_files)} event record file(s) from current RFID reader.")
 
-        self._logger.debug("Extracting dates from filenames...")
+        LOGGER.debug("Extracting dates from filenames...")
 
-        detection_record_dates = set(extract_filename_date(f.name, logger=self._logger) for f in detection_record_files)
-        event_record_dates = set(extract_filename_date(f.name, logger=self._logger) for f in event_record_files)
+        detection_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in detection_record_files)
+        event_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in event_record_files)
 
         # Generate expected date range from DEFAULT_FIRST_DATE to today
         today = date.today()
@@ -140,14 +141,14 @@ class DatabaseManager:
             missing_event_file_dates = sorted(missing_event_file_dates + [last_event_file_date])
 
         # logging summary of missing dates
-        self._logger.debug(f"Detection records: {len(missing_detection_file_dates)} missing/incomplete date(s) out of {len(expected_dates)}")
+        LOGGER.debug(f"Detection records: {len(missing_detection_file_dates)} missing/incomplete date(s) out of {len(expected_dates)}")
         if missing_detection_file_dates:
-            self._logger.debug(f"Missing detection dates: {self._format_date_intervals(missing_detection_file_dates)}")
+            LOGGER.debug(f"Missing detection dates: {self._format_date_intervals(missing_detection_file_dates)}")
 
         # logging summary of missing dates
-        self._logger.debug(f"Event records: {len(missing_event_file_dates)} missing/incomplete date(s) out of {len(expected_dates)}")
+        LOGGER.debug(f"Event records: {len(missing_event_file_dates)} missing/incomplete date(s) out of {len(expected_dates)}")
         if missing_event_file_dates:
-            self._logger.debug(f"Missing event dates: {self._format_date_intervals(missing_event_file_dates)}")
+            LOGGER.debug(f"Missing event dates: {self._format_date_intervals(missing_event_file_dates)}")
 
         export_dates: ExportDates = ExportDates(
             detection_record_dates=missing_detection_file_dates,
@@ -174,19 +175,19 @@ class DatabaseManager:
         last_exported_dates: dict[str, date] = {}
         for detection_record_dir in detection_record_dirs:
             serial = detection_record_dir.name
-            self._logger.debug(f"Checking detection record files for serial number: {serial}")
+            LOGGER.debug(f"Checking detection record files for serial number: {serial}")
 
 
             detection_record_files = list(detection_record_dir.glob("*.txt"))
             if not detection_record_files:
-                self._logger.debug("No existing detection record files found.")
+                LOGGER.debug("No existing detection record files found.")
                 last_exported_dates[serial] = None
                 continue
 
-            detection_record_dates = set(extract_filename_date(f.name, logger=self._logger) for f in detection_record_files)
+            detection_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in detection_record_files)
 
             last_exported_date = max(detection_record_dates)
-            self._logger.debug(f"Last exported date based on existing detection record files: {last_exported_date}")
+            LOGGER.debug(f"Last exported date based on existing detection record files: {last_exported_date}")
             last_exported_dates[serial] = last_exported_date
 
         return last_exported_dates

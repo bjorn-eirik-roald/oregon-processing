@@ -8,6 +8,8 @@ and receiving responses.
 
 from oregon_processing.util.logging_manager import get_logger
 
+LOGGER = get_logger(__name__)
+
 # Support for history of readline on Windows via pyreadline3
 try:
     import readline  # Linux / macOS
@@ -27,7 +29,6 @@ class InteractiveTerminal:
             CommandManager instance for sending commands to device.
         """
         self._command_manager = command_manager
-        self._logger = get_logger(__name__)
 
     def run(self):
         """
@@ -38,7 +39,7 @@ class InteractiveTerminal:
         """
 
 
-        self._logger.info("Entering interactive terminal. Type 'exit' to quit.")
+        LOGGER.info("Entering interactive terminal. Type 'exit' to quit.")
 
         try:
             while True:
@@ -49,21 +50,21 @@ class InteractiveTerminal:
 
                 # Exit on 'exit' or 'quit'
                 if cmd.lower() in ("exit", "quit"):
-                    self._logger.info("Exiting terminal.")
+                    LOGGER.info("Exiting terminal.")
                     break
 
                 # Validate command format
                 if not self._command_manager.validate_command(cmd):
-                    self._logger.warning("Invalid command. Use a two-letter code followed by a space (e.g., 'SY ').")
-                    self._logger.info(f"Valid codes: {sorted(self._command_manager.VALID_MAIN_COMMANDS)}")
+                    LOGGER.warning("Invalid command. Use a two-letter code followed by a space (e.g., 'SY ').")
+                    LOGGER.info(f"Valid codes: {sorted(self._command_manager.VALID_MAIN_COMMANDS)}")
                     continue
 
                 # send command and get cleaned response
                 lines = self._command_manager.send_command(cmd)
                 if lines:
-                    self._logger.info("Response:\n"+"\n".join(lines))
+                    LOGGER.info("Response:\n"+"\n".join(lines))
                 else:
-                    self._logger.info("Command received without error")
+                    LOGGER.info("Command received without error")
 
         except KeyboardInterrupt:
-            self._logger.info("Terminal interrupted by user.")
+            LOGGER.info("Terminal interrupted by user.")

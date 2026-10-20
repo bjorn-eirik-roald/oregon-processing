@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.exceptions import ConfigNotFoundError, InvalidConfigError
 
 class OregonConfig:
@@ -15,7 +17,6 @@ class OregonConfig:
 
 
     def __init__(self):
-        self._logger = get_logger(__name__)
         self._config_file_path = self.get_config_file_path()
         self._last_project_dir = None
 
@@ -78,7 +79,7 @@ class OregonConfig:
         if raw is not None:
             last_project_dir = Path(raw)
             if not last_project_dir.is_dir():
-                self._logger.warning(
+                LOGGER.warning(
                     f"Last project directory no longer exists: '{last_project_dir}'. Treating as unset."
                 )
                 last_project_dir = None
@@ -91,5 +92,5 @@ class OregonConfig:
         if last_project_dir is not None:
             if not isinstance(last_project_dir, str):
                 error_message = f"Invalid config: 'last_project_dir' must be a string or null, got {type(last_project_dir).__name__}."
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise InvalidConfigError(error_message)

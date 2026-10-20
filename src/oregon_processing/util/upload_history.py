@@ -5,6 +5,8 @@ from datetime import datetime
 from oregon_processing.util.command_manager import CommandManager
 from oregon_processing.util.exceptions import UnexpectedResponseError
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 
 
@@ -32,7 +34,6 @@ class UploadHistory:
 class UploadHistoryChecker:
 
     def __init__(self, command_manager: CommandManager, mode_manager: DeviceModeManager):
-        self._logger = get_logger(__name__)
 
         self._command_manager = command_manager
         self._mode_manager = mode_manager
@@ -82,7 +83,7 @@ class UploadHistoryChecker:
                         upload_history.upload_count = int(parts[1].strip())
                     except ValueError:
                         error_message = f"Unrecognized line format in upload history at row {i + 1}: '{line}'"
-                        self._logger.error(error_message)
+                        LOGGER.error(error_message)
                         raise UnexpectedResponseError(error_message)
 
             # Skip header row (Num   UP Date    Time    Records)
@@ -104,7 +105,7 @@ class UploadHistoryChecker:
                         upload_history.uploads.append(upload_record)
                     except (ValueError, IndexError):
                         error_message = f"Unrecognized line format in upload history at row {i + 1}: '{line}'"
-                        self._logger.error(error_message)
+                        LOGGER.error(error_message)
                         raise UnexpectedResponseError(error_message)
 
             # Parse NEW records line
@@ -118,7 +119,7 @@ class UploadHistoryChecker:
                     upload_history.new_records = int(parts[-1])
                 except (ValueError, IndexError):
                     error_message = f"Unrecognized line format in upload history at row {i + 1}: '{line}'"
-                    self._logger.error(error_message)
+                    LOGGER.error(error_message)
                     raise UnexpectedResponseError(error_message)
 
 
@@ -131,12 +132,12 @@ class UploadHistoryChecker:
                     upload_history.total_records = int(parts[-1])
                 except (ValueError, IndexError):
                     error_message = f"Unrecognized line format in upload history at row {i + 1}: '{line}'"
-                    self._logger.error(error_message)
+                    LOGGER.error(error_message)
                     raise UnexpectedResponseError(error_message)
 
             else:
                 error_message = f"Unrecognized line format in upload history at row {i + 1}: '{line}'"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
 

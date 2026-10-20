@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
 
 if TYPE_CHECKING:
@@ -70,7 +72,6 @@ class ClockManager:
         command_manager : CommandManager
             CommandManager instance for sending commands to device.
         """
-        self._logger = get_logger(__name__)
 
         self._command_manager = command_manager
 
@@ -116,11 +117,11 @@ class ClockManager:
 
             # log if user selected not to sync
             if confirm in ['n', 'no']:
-                self._logger.debug("User selected not to sync device time.")
+                LOGGER.debug("User selected not to sync device time.")
 
             # log if user selected to sync and attempt synchronization
             elif confirm in ['y', 'yes']:
-                self._logger.debug("User selected to synch computer/device times.")
+                LOGGER.debug("User selected to synch computer/device times.")
 
                 # attempt to synchronize device time and re-check synchronization status
                 try:
@@ -135,7 +136,7 @@ class ClockManager:
 
                 except Exception as e:
                     error_message = f"Failed to synchronize device time: {e}"
-                    self._logger.error(error_message)
+                    LOGGER.error(error_message)
                     raise ClockSyncError(error_message)
 
         # return either the original clock check result (if no sync attempted) or the updated clock check result (if sync attempted)
@@ -257,7 +258,7 @@ class ClockManager:
         if time_diff is not None and not is_synchronized:
             status_message += f"\n    Computer/Device Time Difference: {time_diff:+.1f}s ({abs(time_diff):.1f}s {'ahead' if time_diff > 0 else 'behind'})"
 
-        self._logger.info(status_message)
+        LOGGER.info(status_message)
 
     def _sync_device_time(self) -> bool:
         """
@@ -270,21 +271,21 @@ class ClockManager:
         """
 
 
-        self._logger.debug("Setting device timezone to UTC.")
+        LOGGER.debug("Setting device timezone to UTC.")
         self._command_manager.send_command("TZ 0")
-        self._logger.info(f"Device timezone set to UTC.")
+        LOGGER.info(f"Device timezone set to UTC.")
 
-        self._logger.debug(f"Setting device time to {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC.")
+        LOGGER.debug(f"Setting device time to {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC.")
         computer_datetime_utc = datetime.now().astimezone(timezone.utc)
         dt_command = computer_datetime_utc.strftime("DT %Y-%m-%d %H:%M:%S")
         response_lines = self._command_manager.send_command(dt_command)
 
         if len(response_lines) == 0:
             error_message = "No response received after sending DT command."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise CommandTransmissionError(error_message)
 
-        self._logger.info(f"Device time was updated to {computer_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')} UTC.")
+        LOGGER.info(f"Device time was updated to {computer_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')} UTC.")
 
         return True
 
@@ -293,12 +294,12 @@ class ClockManager:
             lines = self._command_manager.send_command("DT")
         except Exception as e:
             error_message = f"Failed to send DT command: {e}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise CommandTransmissionError(error_message)
 
         if len(lines) != 1:
             error_message = f"Unexpected number of lines in DT response: {len(lines)}. Response: {lines}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         dt_line = lines[0].strip()
@@ -327,7 +328,7 @@ class ClockManager:
 
         if len(parts) < 2:
             error_message = f"Unrecognized DT response format: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         dt_line_format = None
@@ -337,7 +338,7 @@ class ClockManager:
             dt_line_format = "absolute"
         else:
             error_message = f"Unrecognized DT response format: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         if dt_line_format == "elapsed":
@@ -367,7 +368,7 @@ class ClockManager:
 
         if len(parts) != 2:
             error_message = f"Unrecognized DT response format: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         sync_status: str = parts[-1] # E for elapsed time
@@ -388,7 +389,7 @@ class ClockManager:
             hours, minutes, seconds = [int(part) for part in time_part.split(':')]
         except ValueError:
             error_message = f"Failed to parse hours, minutes, and seconds from DT response: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         # Create timedelta for elapsed time
@@ -417,7 +418,7 @@ class ClockManager:
         parts = dt_line.split()
         if len(parts) < 4: # Expect at least date, time, sync status, and timezone
             error_message = f"Unrecognized DT response format: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         date_str = parts[0]  # YYYY-MM-DD
@@ -427,7 +428,7 @@ class ClockManager:
         # Validate sync status is a single recognized character
         if sync_status not in self.TIME_STATUSES:
             error_message = f"Unrecognized sync status '{sync_status}' in DT response: {dt_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         # Parse time and milliseconds
@@ -453,12 +454,12 @@ class ClockManager:
             lines = self._command_manager.send_command("TZ")
         except Exception as e:
             error_message = f"Failed to send TZ command: {e}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise CommandTransmissionError(error_message)
 
         if len(lines) != 2: # TODO is it always two lines or does it vary based on sync status?
             error_message = f"Unexpected number of lines in TZ response: {len(lines)}. Response: {lines}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         tz_line = lines[0].strip()
@@ -490,7 +491,7 @@ class ClockManager:
             tz_line_format = "hours_only"
         else:
             error_message = f"Unrecognized timezone format: {tz_line}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         # FORMAT 1: "Hours:minutes to UT: +3h30m"
@@ -506,7 +507,7 @@ class ClockManager:
                 offset_part = offset_part[1:]
             else:
                 error_message = f"Unrecognized timezone format. No sign found: {tz_line}"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
             # Parse hours and minutes
@@ -515,7 +516,7 @@ class ClockManager:
                 minutes = int(offset_part.split('h')[1].strip().split('m')[0].strip())
             except (IndexError, ValueError) as e:
                 error_message = f"Failed to parse hours and minutes from TZ response: {tz_line}"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
 
@@ -533,7 +534,7 @@ class ClockManager:
                 offset_part = offset_part[1:]
             else:
                 error_message = f"Unrecognized timezone format. No sign found: {tz_line}"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
             # Parse hours only

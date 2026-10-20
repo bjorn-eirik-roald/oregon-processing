@@ -15,6 +15,8 @@ import re
 from oregon_processing.util.logging_manager import get_logger
 
 
+LOGGER = get_logger(__name__)
+
 if TYPE_CHECKING:
     from oregon_processing.util.command_manager import CommandManager
     from oregon_processing.util.system_status import FirmwareVersion, SystemStatus, SystemStatusChecker
@@ -46,7 +48,6 @@ class DeviceHealthChecker:
         system_status_checker : SystemStatusChecker
             SystemStatusChecker instance for checking system status.
         """
-        self._logger = get_logger(__name__)
 
         self._system_status_checker = system_status_checker
         self._command_manager = command_manager
@@ -61,8 +62,8 @@ class DeviceHealthChecker:
             Data class representing the health report of the Oregon RFID device.
         """
 
-        self._logger.debug("Initializing health check of Oregon RFID device.")
-        self._logger.debug("Retrieving System Status.")
+        LOGGER.debug("Initializing health check of Oregon RFID device.")
+        LOGGER.debug("Retrieving System Status.")
 
         critical_warnings = []
         non_critical_warnings = []
@@ -117,9 +118,9 @@ class DeviceHealthChecker:
                 for warning in non_critical_warnings:
                     warning_message += f"\n      - {warning}"
 
-            self._logger.warning(warning_message)
+            LOGGER.warning(warning_message)
 
         else:
-            self._logger.info("Device health check passed. All parameters within normal range.")
+            LOGGER.info("Device health check passed. All parameters within normal range.")
 
         return health_report

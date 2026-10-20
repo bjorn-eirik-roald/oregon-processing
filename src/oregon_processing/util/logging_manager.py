@@ -220,7 +220,6 @@ class LoggingManager:
 
 
         self._root_logger = None
-        self._logger = None
 
     def __enter__(self) -> logging.Logger:
         """
@@ -228,8 +227,7 @@ class LoggingManager:
         """
         try:
             self._setup_handlers()
-            self._logger = get_logger(__name__)
-            self._logger.debug("LoggingManager initialized with console_level=%s, file_level=%s, report_file=%s", self._console_level, self._file_level, self._report_file)
+            LOGGER.debug("LoggingManager initialized with console_level=%s, file_level=%s, report_file=%s", self._console_level, self._file_level, self._report_file)
         except Exception as e:
             self._write_summary()
             self._teardown_handlers()
@@ -254,7 +252,7 @@ class LoggingManager:
         """Get the current report file path. Raises if file logging is not enabled."""
         if not self._write_to_report_file:
             error_message = f"File logging is not enabled, no report file available."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
         return self._report_file
@@ -266,12 +264,12 @@ class LoggingManager:
         """
         if not self._write_to_report_file:
             error_message = f"File logging is not enabled, cannot transfer log file."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
         if self._report_file is None:
             error_message = f"Current report file path is not set, cannot transfer log file."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
         if self._file_handler:
@@ -290,11 +288,11 @@ class LoggingManager:
             # Update the internal report file reference to the new location
             self._report_file = new_report_file
 
-            self._logger.debug(f"Log file transferred to {new_report_file}", extra={"_skip_path_alias_filter": True})
+            LOGGER.debug(f"Log file transferred to {new_report_file}", extra={"_skip_path_alias_filter": True})
 
         except Exception as e:
             error_message = f"Failed to transfer log file to {new_report_file}: {e}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message) from e
 
     def _setup_handlers(self) -> None:
@@ -314,7 +312,7 @@ class LoggingManager:
         if self._write_to_report_file:
             if self._report_file is None:
                 error_message = "Report_file must be provided when write_to_report_file is True."
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise ValueError(error_message)
 
             self._report_file.parent.mkdir(parents=True, exist_ok=True)
@@ -355,18 +353,18 @@ class LoggingManager:
         total = warning_count + error_count + critical_count
 
         # Write a clear, unformatted separator line before the summary block
-        self._logger.info("", extra={"_clear_format": True})
+        LOGGER.info("", extra={"_clear_format": True})
 
         if total == 0:
-            self._logger.info(
+            LOGGER.info(
                 "No WARNING, ERROR, or CRITICAL logs recorded.",
                 extra={"_from_summary": True},
             )
             # add two empty lines after the summary for better separation in the logs
-            self._logger.info("", extra={"_clear_format": True})
+            LOGGER.info("", extra={"_clear_format": True})
             return
 
-        self._logger.info(
+        LOGGER.info(
             f"WARNING={warning_count}, ERROR={error_count}, CRITICAL={critical_count}",
             extra={"_from_summary": True},
         )
@@ -389,14 +387,14 @@ class LoggingManager:
             for level in ("WARNING", "ERROR", "CRITICAL"):
                 for event in self._memory_handler.events[level]:
                     summary_message = event.message.replace("\n", f"\n{indent}")
-                    self._logger.log(
+                    LOGGER.log(
                         event.levelno,
                         summary_message,
                         extra={"_from_summary": True},
                     )
 
             # add two empty lines after the summary for better separation in the logs
-            self._logger.info("", extra={"_clear_format": True})
+            LOGGER.info("", extra={"_clear_format": True})
 
         finally:
             # Restore original formatters
@@ -440,3 +438,6 @@ def get_logger(name: str) -> logging.Logger:
     if not has_filter:
         logger.addFilter(SourceProcessAutoFilter(logger_module_name=name))
     return logger
+
+
+LOGGER = get_logger(__name__)

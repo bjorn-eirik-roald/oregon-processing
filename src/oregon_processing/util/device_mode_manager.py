@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 from oregon_processing.util.exceptions import ModeChangeError
 from oregon_processing.util.logging_manager import get_logger
 
+LOGGER = get_logger(__name__)
+
 if TYPE_CHECKING:
     from oregon_processing.util.command_manager import CommandManager
     from oregon_processing.util.system_status import SystemStatus, SystemStatusChecker
@@ -37,7 +39,6 @@ class DeviceModeManager:
         status_checker : SystemStatusChecker
             Status checker instance for retrieving system status.
         """
-        self._logger = get_logger(__name__)
 
         self._command_manager = command_manager
         self._status_checker = status_checker
@@ -48,10 +49,10 @@ class DeviceModeManager:
 
         try:
             self._startup_mode = self.get_current_mode()
-            self._logger.debug(f"Device startup mode: {self._startup_mode}")
+            LOGGER.debug(f"Device startup mode: {self._startup_mode}")
         except Exception as e:
             error_message = "Failed to get current device mode on context enter."
-            self._logger.exception(error_message)
+            LOGGER.exception(error_message)
             raise
 
         return self
@@ -88,20 +89,20 @@ class DeviceModeManager:
 
         if mode_name not in self.MODES:
             error_message = f"Invalid mode: {mode_name}. Can only set modes to: Standby, Run, Sleep"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise ValueError(error_message)
 
         command = self.MODES[mode_name]['command']
 
         current_mode = self.get_current_mode()
         if current_mode != mode_name:
-            self._logger.debug(f"Changing device mode from '{current_mode}' to '{mode_name}' (sending {command} command).")
+            LOGGER.debug(f"Changing device mode from '{current_mode}' to '{mode_name}' (sending {command} command).")
             self._command_manager.send_command(command)
             if self.get_current_mode().lower() == mode_name.lower():
-                self._logger.debug(f"Device mode changed from '{current_mode}' to '{mode_name}'.")
+                LOGGER.debug(f"Device mode changed from '{current_mode}' to '{mode_name}'.")
             else:
                 error_message = f"Device mode change failed! Expected mode: '{mode_name}', Actual mode: '{self.get_current_mode()}'"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise ModeChangeError(error_message)
 
         return True
@@ -115,13 +116,13 @@ class DeviceModeManager:
         """Return the Oregon RFID device to its start-up mode."""
 
         if not self._startup_mode:
-            self._logger.warning("Startup mode not set. Cannot return to startup mode.")
+            LOGGER.warning("Startup mode not set. Cannot return to startup mode.")
             return
 
         target_mode = self._startup_mode.lower()
 
         if target_mode is None:
-            self._logger.warning(f"WARNING: Start-up mode is None. Can not return to startup mode. Setting reader to Sleep mode to be safe.")
+            LOGGER.warning(f"WARNING: Start-up mode is None. Can not return to startup mode. Setting reader to Sleep mode to be safe.")
             target_mode = 'Sleep'
 
         self.change_mode(target_mode)

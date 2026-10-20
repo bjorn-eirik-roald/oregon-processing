@@ -1,6 +1,8 @@
 from oregon_processing.util.command_manager import CommandManager
 from oregon_processing.util.logging_manager import get_logger
 
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.exceptions import NoFileSelectedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 
@@ -136,7 +138,6 @@ class SystemStatusChecker:
     """Class to check system status and prerequisites for Oregon RFID processing."""
 
     def __init__(self, command_manager: CommandManager):
-        self._logger = get_logger(__name__)
         self._command_manager: CommandManager = command_manager
 
         self._ignored_lines: list[str] = []
@@ -150,7 +151,7 @@ class SystemStatusChecker:
         # Validate we have at least 3 lines to parse the row 1-3, which are always in the same rows.
         if len(status_lines) < 3:
             error_message = f"Expected at least 3 lines in SY response, got {len(status_lines)}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         for line_num, line in enumerate(status_lines):
@@ -158,11 +159,11 @@ class SystemStatusChecker:
 
             if not line:
                 error_message = f"Empty line encountered in SY response at row {line_num + 1} of SY response."
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
             if line in self._ignored_lines:
-                self._logger.debug(f"Ignoring previously approved unrecognized line in SY response at row {line_num + 1}: '{line}'")
+                LOGGER.debug(f"Ignoring previously approved unrecognized line in SY response at row {line_num + 1}: '{line}'")
                 continue
 
             # Use specific parsing for the first 3 lines, then auto-parse the rest
@@ -179,7 +180,7 @@ class SystemStatusChecker:
             status.check_prerequisites()  # validate prerequisites
         except UnexpectedResponseError as e:
             error_message = f"System status prerequisites check failed: {str(e)}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         return status
@@ -188,7 +189,7 @@ class SystemStatusChecker:
         match = re.search(r"^Oregon RFID\s+(.*)$", line, re.IGNORECASE)
         if not match:
             error_message = f"Unexpected device type line format at row 1 of SY response: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         device_type_str = match.group(1).strip()
@@ -199,14 +200,14 @@ class SystemStatusChecker:
             status.device_type = 'ORMR'
         else:
             error_message = f"Could not determine device type from line 1 of SY response: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _parse_line_2(self, line: str, status: SystemStatus):
         match = re.search(r"^(V[0-9]+\.[0-9]+[A-Z]*)\s+([0-9A-Fa-f\-]+)$", line)
         if not match:
             error_message = f"Unexpected version/serial line format at row 2 of SY response: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         firmware_version_str = match.group(1).strip()
@@ -217,7 +218,7 @@ class SystemStatusChecker:
             version = FirmwareVersion(firmware_version_str)
         except UnexpectedResponseError as e:
             error_message = f"Unexpected version format in row 2 of SY response: '{line}' - {str(e)}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         status.version = version
@@ -249,11 +250,11 @@ class SystemStatusChecker:
             approved = self._handle_unrecognized_line(line=line, line_num=line_num)
 
             if approved:
-                self._logger.warning(f"Unrecognized line in system status at row {line_num + 1} of SY response: '{line}' - User approved to ignore.")
+                LOGGER.warning(f"Unrecognized line in system status at row {line_num + 1} of SY response: '{line}' - User approved to ignore.")
                 self._ignored_lines.append(line)
             else:
                 error_message = f"Unrecognized line format in system status at row {line_num + 1} of SY response: '{line}'"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise UnexpectedResponseError(error_message)
 
 
@@ -268,7 +269,7 @@ class SystemStatusChecker:
         # validate mode is one of expected values
         if not DeviceModeManager.is_valid_mode(mode):
             error_message = f"Unexpected mode value parsed from SY response: '{mode}' in line {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         status.mode = mode
@@ -286,7 +287,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse supply voltage as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_charge_pulse_amps_line(self, line: str, line_num: int, status: SystemStatus):
@@ -301,7 +302,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse charge pulse amps as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_listen_amps_line(self, line: str, line_num: int, status: SystemStatus):
@@ -316,7 +317,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse listen amps as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_effective_amps_line(self, line: str, line_num: int, status: SystemStatus):
@@ -331,7 +332,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse effective amps as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_standby_amps_line(self, line: str, line_num: int, status: SystemStatus):
@@ -346,7 +347,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse standby amps as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_sleep_amps_line(self, line: str, line_num: int, status: SystemStatus):
@@ -361,7 +362,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse sleep amps as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_noise_line(self, line: str, line_num: int, status: SystemStatus):
@@ -376,7 +377,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse noise as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_antenna_line(self, line: str, line_num: int, status: SystemStatus):
@@ -406,7 +407,7 @@ class SystemStatusChecker:
             return True
         except ValueError as e:
             error_message = f"Unexpected antenna line format in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_shutdown_supercap_line(self, line: str, line_num: int, status: SystemStatus):
@@ -421,7 +422,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse shutdown supercap as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_shutdown_supply_line(self, line: str, line_num: int, status: SystemStatus):
@@ -436,7 +437,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse shutdown supply as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_sleep_battery_line(self, line: str, line_num: int, status: SystemStatus):
@@ -451,7 +452,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse sleep battery as float in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_tags_in_archive_line(self, line: str, line_num: int, status: SystemStatus):
@@ -466,7 +467,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse tags in archive as int in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _attempt_parse_bluetooth_line(self, line: str, line_num: int, status: SystemStatus):
@@ -498,7 +499,7 @@ class SystemStatusChecker:
             return True
         except ValueError:
             error_message = f"Could not parse GNSS log interval as int in SY response at row {line_num + 1}: '{line}'"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
     def _handle_unrecognized_line(self, line: str, line_num: int):

@@ -4,6 +4,8 @@ Format Manager for Oregon RFID device record format operations
 """
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.command_manager import CommandManager
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 from oregon_processing.util.exceptions import UnexpectedResponseError
@@ -56,7 +58,6 @@ class FormatManager:
         mode_manager : DeviceModeManager
             DeviceModeManager instance for managing device modes.
         """
-        self._logger = get_logger(__name__)
 
         self._command_manager = command_manager
         self._mode_manager = mode_manager
@@ -74,7 +75,7 @@ class FormatManager:
             self._startup_format = self._fetch_detection_record_format()
         except Exception as e:
             error_message = "Failed to fetch detection record format on context enter."
-            self._logger.exception(error_message)
+            LOGGER.exception(error_message)
             raise
 
         return self
@@ -119,11 +120,11 @@ class FormatManager:
             if self._detection_record_format['columns_raw'] == format_string:
                 return True
             else:
-                self._logger.warning(f"WARNING: Format mismatch. Expected '{format_string}', got '{self._detection_record_format['columns_raw']}'")
+                LOGGER.warning(f"WARNING: Format mismatch. Expected '{format_string}', got '{self._detection_record_format['columns_raw']}'")
                 return False
 
         except Exception:
-            self._logger.exception(f"Error setting detection record format.")
+            LOGGER.exception(f"Error setting detection record format.")
             return False
 
     def _fetch_detection_record_format(self) -> dict:
@@ -153,7 +154,7 @@ class FormatManager:
 
         if len(response_lines) != 1:
             error_message = f"Unexpected number of lines in FM response: {len(response_lines)}. Response: {response_lines}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         columns_raw = response_lines[0].strip()
@@ -167,7 +168,7 @@ class FormatManager:
 
         if any(col not in self.FIELD_NAMES for col in columns):
             unknown_cols = [col for col in columns if col not in self.FIELD_NAMES]
-            self._logger.warning(f"WARNING: Unknown columns in detection record format: {unknown_cols}")
+            LOGGER.warning(f"WARNING: Unknown columns in detection record format: {unknown_cols}")
 
         field_names = {col: self.FIELD_NAMES.get(col, "Unknown") for col in columns}
 
@@ -190,7 +191,7 @@ class FormatManager:
 
         if self._startup_format is None:
             # No startup format stored, nothing to restore
-            self._logger.warning("No startup format stored. Cannot restore format.")
+            LOGGER.warning("No startup format stored. Cannot restore format.")
             return True
 
         current_format = self._fetch_detection_record_format()
@@ -202,9 +203,9 @@ class FormatManager:
 
         success = self.set_detection_record_format(self._startup_format['columns_raw'])
         if not success:
-            self._logger.warning("WARNING: Failed to restore original detection record format.")
+            LOGGER.warning("WARNING: Failed to restore original detection record format.")
         else:
-            self._logger.info("Original detection record format restored.")
+            LOGGER.info("Original detection record format restored.")
 
         return success
 

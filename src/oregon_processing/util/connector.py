@@ -6,6 +6,8 @@ from serial.tools import list_ports
 from oregon_processing.util.logging_manager import get_logger
 
 
+LOGGER = get_logger(__name__)
+
 class ConnectionResult:
     """Class to encapsulate the result of a connection attempt."""
 
@@ -22,8 +24,7 @@ class Connector:
     BAUD_RATES = [115200, 57600, 9600]
 
     def __init__(self):
-        self._logger = get_logger(__name__)
-
+        pass
     def connect(self) -> ConnectionResult:
         """
         Attempt to connect to Oregon RFID sensor with circular retry options.
@@ -36,7 +37,7 @@ class Connector:
 
 
 
-        self._logger.info("Initializing connection attempt")
+        LOGGER.info("Initializing connection attempt")
 
         first_attempt = True
 
@@ -55,7 +56,7 @@ class Connector:
                     return ConnectionResult(success=False, error_message="User cancelled port selection.")
             else:
                 # First attempt: Try default baud rate and look for Prolific ports
-                self._logger.debug("First connection attempt: trying default baud rate and searching for Prolific ports.")
+                LOGGER.debug("First connection attempt: trying default baud rate and searching for Prolific ports.")
                 bauds = [self.BAUD_RATES[0]]  # Start with default baud rate
                 selected_ports = self._handle_prolific_port_search(self._get_all_ports())
 
@@ -67,7 +68,7 @@ class Connector:
                 return result
 
             # Connection failed, ask if user wants to retry
-            self._logger.info("Connection failed on all attempted port/baud combinations.")
+            LOGGER.info("Connection failed on all attempted port/baud combinations.")
 
             while True:
                 retry = input("\nWould you like to retry? (y/n): ").strip().lower()
@@ -75,15 +76,15 @@ class Connector:
                     break
 
             if retry not in ['y', 'yes']:
-                self._logger.debug("User has chosen not to retry connection. Exiting connection process.")
+                LOGGER.debug("User has chosen not to retry connection. Exiting connection process.")
                 return ConnectionResult(success=False, error_message="User chose not to retry connection.")
             else:
-                self._logger.debug("User has chosen to retry connection.")
+                LOGGER.debug("User has chosen to retry connection.")
 
     def _select_baud_rate(self):
         """Allow user to select baud rate(s) to use for connection."""
 
-        self._logger.debug("Prompting user to select baud rate(s) for connection attempt.")
+        LOGGER.debug("Prompting user to select baud rate(s) for connection attempt.")
 
         selection_options = "Available baud rates:\n"
         for i, baud in enumerate(self.BAUD_RATES, 1):
@@ -91,7 +92,7 @@ class Connector:
         selection_options += f"  {len(self.BAUD_RATES) + 1}. Try all baud rates\n"
         selection_options += f"  {len(self.BAUD_RATES) + 2}. Abort connection process"
 
-        self._logger.info(selection_options)
+        LOGGER.info(selection_options)
 
         while True:
             choice = input("\nSelect a baud rate option (enter option number): ").strip()
@@ -99,22 +100,22 @@ class Connector:
             try:
                 index = int(choice) - 1
             except ValueError:
-                self._logger.info("Invalid selection! Enter a number from the list.")
+                LOGGER.info("Invalid selection! Enter a number from the list.")
                 continue
 
 
 
             # Return selected baud rate(s)
             if 0 <= index < len(self.BAUD_RATES):
-                self._logger.debug(f"User selected baud rate: {self.BAUD_RATES[index]}")
+                LOGGER.debug(f"User selected baud rate: {self.BAUD_RATES[index]}")
                 return [self.BAUD_RATES[index]]
             # User chose to try all baud rates
             elif index == len(self.BAUD_RATES):
-                self._logger.debug("User selected option to try all baud rates.")
+                LOGGER.debug("User selected option to try all baud rates.")
                 return self.BAUD_RATES
             # User cancelled
             elif index == len(self.BAUD_RATES) + 1:
-                self._logger.debug("User cancelled baud rate selection.")
+                LOGGER.debug("User cancelled baud rate selection.")
                 return None
             # Invalid selection
             else:
@@ -124,10 +125,10 @@ class Connector:
         """Handle user selecting a specific port. Returns selected port device or None."""
 
 
-        self._logger.debug("Prompting user to manually select a port from the list of available ports.")
+        LOGGER.debug("Prompting user to manually select a port from the list of available ports.")
 
         if not ports:
-            self._logger.info("No ports available. Returning to previous menu.")
+            LOGGER.info("No ports available. Returning to previous menu.")
             return None
 
         selection_options = "Available ports:\n"
@@ -135,7 +136,7 @@ class Connector:
             selection_options += f"  {i}. {port.device} - {port.description}\n"
         selection_options += f"  {len(ports) + 1}. Cancel and return to previous menu\n"
 
-        self._logger.info(selection_options)
+        LOGGER.info(selection_options)
 
         # Loop until valid port is selected
         while True:
@@ -148,10 +149,10 @@ class Connector:
                 continue
 
             if 0 <= port_index < len(ports):
-                self._logger.debug(f"User selected port: {ports[port_index].device} - {ports[port_index].description}")
+                LOGGER.debug(f"User selected port: {ports[port_index].device} - {ports[port_index].description}")
                 return ports[port_index].device
             elif port_index == len(ports):
-                self._logger.debug("User cancelled manual port selection. Returning to previous menu.")
+                LOGGER.debug("User cancelled manual port selection. Returning to previous menu.")
                 return None
             else:
                 print("Invalid selection. Please enter a number from the list.")
@@ -159,35 +160,35 @@ class Connector:
     def _handle_prolific_port_search(self, ports):
         """Return list of Prolific ports (if any) for later connection attempt."""
 
-        self._logger.debug("Searching for Prolific USB serial adapter ports among available ports.")
+        LOGGER.debug("Searching for Prolific USB serial adapter ports among available ports.")
 
         # Filter for Prolific ports (common for USB serial adapters)
         prolific_ports = [p.device for p in ports if "prolific" in p.description.lower()]
 
 
         if prolific_ports:
-            self._logger.info(f"Found Prolific USB serial adapter port(s): {prolific_ports}")
+            LOGGER.info(f"Found Prolific USB serial adapter port(s): {prolific_ports}")
             return prolific_ports
 
-        self._logger.info("No Prolific USB serial adapter ports found. Returning to previous menu.")
+        LOGGER.info("No Prolific USB serial adapter ports found. Returning to previous menu.")
         return None
 
     def _handle_all_ports_selection(self, ports):
         """Return list of all available port devices for later connection attempt."""
 
-        self._logger.debug("Creating list of all available ports for connection attempt.")
+        LOGGER.debug("Creating list of all available ports for connection attempt.")
 
         if not ports:
-            self._logger.info("No ports available. Returning to previous menu.")
+            LOGGER.info("No ports available. Returning to previous menu.")
             return None
 
         port_devices = [p.device for p in ports]
-        self._logger.info(f"Each available port will be attempted: {port_devices}")
+        LOGGER.info(f"Each available port will be attempted: {port_devices}")
         return port_devices
 
     def _select_ports(self):
 
-        self._logger.debug("Prompting user to select port(s) for connection attempt.")
+        LOGGER.debug("Prompting user to select port(s) for connection attempt.")
 
         selection_options = "Port selection options:\n"
         selection_options += "  1. Select a specific port to attempt\n"
@@ -199,7 +200,7 @@ class Connector:
             ports = self._get_all_ports()
 
             # select option for selecting port
-            self._logger.info(selection_options)
+            LOGGER.info(selection_options)
 
             while True:
                 choice = input("\nEnter your choice (1, 2, 3, or 4): ").strip()
@@ -212,17 +213,17 @@ class Connector:
 
                 # Valid choice - process accordingly
                 if choice == "1":
-                    self._logger.debug("User selected option to manually select a port.")
+                    LOGGER.debug("User selected option to manually select a port.")
                     selected_port = self._handle_manual_port_selection(ports)
                     selected_ports = [selected_port] if selected_port else None
                 elif choice == "2":
-                    self._logger.debug("User selected option to attempt all available ports.")
+                    LOGGER.debug("User selected option to attempt all available ports.")
                     selected_ports = self._handle_all_ports_selection(ports)
                 elif choice == "3":
-                    self._logger.debug("User selected option to search for Prolific USB serial adapter ports.")
+                    LOGGER.debug("User selected option to search for Prolific USB serial adapter ports.")
                     selected_ports = self._handle_prolific_port_search(ports)
                 elif choice == "4":
-                    self._logger.debug("User aborted the connection process.")
+                    LOGGER.debug("User aborted the connection process.")
                     return False
 
                 if selected_ports:
@@ -241,7 +242,7 @@ class Connector:
 
         for port in ports:
             for baud in bauds:
-                self._logger.info(f"Attempting connection to {port} at {baud} baud.")
+                LOGGER.info(f"Attempting connection to {port} at {baud} baud.")
 
                 ser = None
                 try:
@@ -255,19 +256,19 @@ class Connector:
                     response = ser.readline().decode(errors="ignore").strip()
 
                     if response:
-                        self._logger.info(f"Successfully connected to {port} at {baud} baud.")
+                        LOGGER.info(f"Successfully connected to {port} at {baud} baud.")
                         result = ConnectionResult(success=True, connection=ser, port=port, baudrate=baud)
                         return result
                     else:
                         ser.close()
-                        self._logger.info("No response when attempting connection.")
+                        LOGGER.info("No response when attempting connection.")
                 except Exception as e:
 
                     if ser and ser.is_open:
                         ser.close()
 
                     error_message = f"Error when connecting to {port} at {baud} baud: {e}"
-                    self._logger.error(error_message)
+                    LOGGER.error(error_message)
 
         return ConnectionResult(success=False, error_message="Failed to connect on all attempted port/baud combinations.")
 

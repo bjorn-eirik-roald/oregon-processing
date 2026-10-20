@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 from oregon_processing.util.system_status import SystemStatus, SystemStatusChecker
 from oregon_processing.util.upload_history import UploadHistory, UploadHistoryChecker
@@ -44,7 +46,6 @@ class DataExporter:
         system_status_checker : SystemStatus
             System status checker instance for monitoring system status.
         """
-        self._logger = get_logger(__name__)
 
         self._format_manager: FormatManager = format_manager
         self._command_manager: CommandManager = command_manager
@@ -73,7 +74,7 @@ class DataExporter:
         """
 
         if not dates:
-            self._logger.warning("No dates provided for export. No event records will be exported.")
+            LOGGER.warning("No dates provided for export. No event records will be exported.")
             return False
 
         system_status: SystemStatus = self._system_status_checker.get_system_status()
@@ -83,11 +84,11 @@ class DataExporter:
         if mode != 'Standby':
             old_mode = mode
             self._mode_manager.change_mode('Standby')
-            self._logger.info(f"Changed device mode to Standby for export. Will return to {old_mode} mode after export is complete.")
+            LOGGER.info(f"Changed device mode to Standby for export. Will return to {old_mode} mode after export is complete.")
 
         # Header
-        self._logger.info("Initializing export of event records from {} date(s).".format(len(dates)))
-        self._logger.debug(f"Output directory: {output_dir}")
+        LOGGER.info("Initializing export of event records from {} date(s).".format(len(dates)))
+        LOGGER.debug(f"Output directory: {output_dir}")
 
         # Prepare ranges and formatting
         num_dates = len(dates)
@@ -97,7 +98,7 @@ class DataExporter:
         all_successful = True
         export_count = 0
 
-        self._logger.debug("Exporting event records to files.")
+        LOGGER.debug("Exporting event records to files.")
         for date_num, current_date in enumerate(all_dates):
 
             output_filepath = output_dir / f"{system_status.serial_number}_event_records_{current_date.strftime('%Y_%m_%d')}.txt"
@@ -114,7 +115,7 @@ class DataExporter:
             except Exception as e:
                 message += f" Failed to export. {e}"
 
-                self._logger.error(message)
+                LOGGER.error(message)
                 success = False
                 all_successful = False
                 response = []
@@ -135,24 +136,24 @@ class DataExporter:
 
                 n_lines = max(len(response) - 3, 0) # correct for header lines in response and also account for completely empty responses
                 message += f" Lines written: {n_lines}."
-                self._logger.info(message)
+                LOGGER.info(message)
                 export_count += 1
             else:
                 message += "Failed to export event records for this date."
-                self._logger.error(message)
+                LOGGER.error(message)
 
         failed_exports = num_dates - export_count
 
 
 
         if all_successful:
-            self._logger.info("Completed Event Record Export. Total dates processed: {}.".format(num_dates))
+            LOGGER.info("Completed Event Record Export. Total dates processed: {}.".format(num_dates))
         if not all_successful:
-            self._logger.warning(f"Completed Event Record Export with {failed_exports} exports failed.")
+            LOGGER.warning(f"Completed Event Record Export with {failed_exports} exports failed.")
 
         if old_mode:
             self._mode_manager.change_mode(old_mode)
-            self._logger.info(f"Returned device mode to {old_mode} after export.")
+            LOGGER.info(f"Returned device mode to {old_mode} after export.")
 
         return True if all_successful else False
 
@@ -182,7 +183,7 @@ class DataExporter:
         """
 
         if not dates:
-            self._logger.warning("No dates provided for export. No detection records will be exported.")
+            LOGGER.warning("No dates provided for export. No detection records will be exported.")
             return False
 
         system_status: SystemStatus = self._system_status_checker.get_system_status()
@@ -192,34 +193,34 @@ class DataExporter:
         if mode != 'Standby':
             old_mode = mode
             self._mode_manager.change_mode('Standby')
-            self._logger.info(f"Changed device mode to Standby for export. Will return to {old_mode} mode after export is complete.")
+            LOGGER.info(f"Changed device mode to Standby for export. Will return to {old_mode} mode after export is complete.")
 
         upload_history: UploadHistory = self._upload_history_checker.get_upload_history()
         total_number_of_records = upload_history.total_records
 
-        self._logger.info("Initializing export of detection records from {} date(s).".format(len(dates)))
-        self._logger.debug(f"Total records on device: {total_number_of_records}")
-        self._logger.debug(f"Output directory: {output_dir}")
+        LOGGER.info("Initializing export of detection records from {} date(s).".format(len(dates)))
+        LOGGER.debug(f"Total records on device: {total_number_of_records}")
+        LOGGER.debug(f"Output directory: {output_dir}")
 
 
-        self._logger.debug("Setting detection record format for export.")
+        LOGGER.debug("Setting detection record format for export.")
 
         default_format = self.DEFAULT_DETECTION_RECORD_FORMAT[system_status.device_type]
         if not self._format_manager.set_detection_record_format(default_format):
-            self._logger.error("Failed to set detection record format. Cannot continue.")
+            LOGGER.error("Failed to set detection record format. Cannot continue.")
             return False
 
-        self._logger.debug("Detection record format set successfully.")
+        LOGGER.debug("Detection record format set successfully.")
 
-        self._logger.info(f"Requesting all ({total_number_of_records}) records from device. This may take a while if there are many records on the device. Please wait...")
+        LOGGER.info(f"Requesting all ({total_number_of_records}) records from device. This may take a while if there are many records on the device. Please wait...")
 
         try:
             response = self._command_manager.send_command("UP*")
         except Exception as e:
-            self._logger.error(f"Failed to retrieve records from device: {e}")
+            LOGGER.error(f"Failed to retrieve records from device: {e}")
             return False
 
-        self._logger.info("All records received.")
+        LOGGER.info("All records received.")
 
         # Retrieve detection record format to determine column order, tag index, and datetime index
 
@@ -231,15 +232,15 @@ class DataExporter:
 
         if arr_idx is None:
             error_message = "ARR index not found in detection record format info. This is required for date filtering. Cannot continue."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
         if tag_idx is None:
             error_message = "TAG index not found in detection record format info. This is required for unique tag counting. Cannot continue."
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise RuntimeError(error_message)
 
-        self._logger.debug("Filtering detection records to export dates.")
+        LOGGER.debug("Filtering detection records to export dates.")
         # Convert dates to strings for comparison (YYYY-MM-DD format sorts chronologically)
         target_dates_set = set(d.strftime("%Y-%m-%d") for d in dates)
 
@@ -253,7 +254,7 @@ class DataExporter:
             try:
                 parts = self._split_detection_record(line, format_info)
             except ValueError:
-                self._logger.error(f"Error: Encountered malformed detection record during filtering. Skipping record: {line}")
+                LOGGER.error(f"Error: Encountered malformed detection record during filtering. Skipping record: {line}")
                 continue  # Skip malformed detection records
 
             # Extract date portion from ARR field (YYYY-MM-DD HH:MM:SS.ddd)
@@ -262,9 +263,9 @@ class DataExporter:
             if record_date_str in target_dates_set:
                 filtered_detection_records.append(parts)
 
-        self._logger.debug("Detection records filtered successfully.")
+        LOGGER.debug("Detection records filtered successfully.")
 
-        self._logger.debug("Organizing detection records by date.")
+        LOGGER.debug("Organizing detection records by date.")
         detection_records_by_date = {}  # dict with date keys and list of detection records values
         unique_tags_by_date = {}        # dict with date keys and set of unique tags values
         all_dates = sorted(dates)
@@ -289,7 +290,7 @@ class DataExporter:
             unique_tags_by_date[current_date].add(record_tag)
             unique_tags.add(record_tag)
 
-        self._logger.debug("Detection records organized by date successfully.")
+        LOGGER.debug("Detection records organized by date successfully.")
 
         # Calculate max width for summary number alignment
         max_summary_width = max(
@@ -319,7 +320,7 @@ class DataExporter:
 
         all_successful = True
         num_failed_exports = 0
-        self._logger.info("Exporting detection records to files.")
+        LOGGER.info("Exporting detection records to files.")
         for date_num, current_date in enumerate(all_dates):
             output_filepath = f"{output_dir}/{system_status.serial_number}_detection_records_{current_date.strftime('%Y_%m_%d')}.txt"
             counter = f"({date_num + 1}/{num_dates})"
@@ -332,7 +333,7 @@ class DataExporter:
                 count_str = str(len(detection_records_by_date[current_date])).rjust(max_count_width)
                 unique_tags_str = str(len(unique_tags_by_date[current_date])).rjust(max_unique_tags_width)
 
-            self._logger.info(f"{spacing}Export {counter}. Exporting data from {current_date}. Number of detection records: {count_str}. Unique tags: {unique_tags_str}.")
+            LOGGER.info(f"{spacing}Export {counter}. Exporting data from {current_date}. Number of detection records: {count_str}. Unique tags: {unique_tags_str}.")
 
             try:
                 with open(output_filepath, 'w') as f:
@@ -354,21 +355,21 @@ class DataExporter:
                     if current_date in detection_records_by_date:
                         f.write('\n'.join(detection_records_by_date[current_date]))
             except Exception as e:
-                self._logger.error(f"Failed to write detection records for {current_date} to file: {e}")
+                LOGGER.error(f"Failed to write detection records for {current_date} to file: {e}")
                 all_successful = False
                 num_failed_exports += 1
                 continue
 
         if all_successful:
-            self._logger.info("All detection record exports completed successfully.")
+            LOGGER.info("All detection record exports completed successfully.")
         else:
-            self._logger.warning(f"{num_failed_exports} detection record exports failed. Please check the logs for details.")
+            LOGGER.warning(f"{num_failed_exports} detection record exports failed. Please check the logs for details.")
 
-        self._logger.info(summary_message)
+        LOGGER.info(summary_message)
 
         if old_mode:
             self._mode_manager.change_mode(old_mode)
-            self._logger.info(f"Returned device mode to {old_mode} after export.")
+            LOGGER.info(f"Returned device mode to {old_mode} after export.")
 
         return all_successful
 

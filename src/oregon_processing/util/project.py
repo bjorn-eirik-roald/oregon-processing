@@ -3,6 +3,8 @@ import json
 
 import oregon_processing
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 from oregon_processing.util.exceptions import UserCancelledError, NoFileSelectedError, InvalidProjectDirectoryError
 
 from oregon_processing.util.popups.file_selector import browse_directory
@@ -13,7 +15,6 @@ from oregon_processing.util.file_names import file_names
 
 class Project:
     def __init__(self, project_dir: Path = None):
-        self._logger = get_logger(__name__)
 
         self._project_json_file = None
 
@@ -26,7 +27,7 @@ class Project:
                 project_dir = browse_directory(title="Select Oregon project directory")
             except NoFileSelectedError:
                     error_message = "Project loading cancelled by user during directory selection."
-                    self._logger.info(error_message)
+                    LOGGER.info(error_message)
                     raise NoFileSelectedError(error_message)
 
         # directories
@@ -44,7 +45,7 @@ class Project:
         self._load_project_parameters()
 
         if self._software_version != oregon_processing.__version__:
-            self._logger.warning(f"Project was created with a different version of Oregon (project software version: {self._software_version}, current software version: {oregon_processing.__version__}).")
+            LOGGER.warning(f"Project was created with a different version of Oregon (project software version: {self._software_version}, current software version: {oregon_processing.__version__}).")
 
     @property
     def project_dir(self) -> Path:
@@ -85,7 +86,6 @@ class Project:
     @classmethod
     def create_new_project(cls):
 
-        logger = get_logger(__name__)
 
         try:
             answer = prompt_yes_no(message="Do you want to create a new Oregon project?")
@@ -107,7 +107,7 @@ class Project:
         message = "Creating new Oregon project with the following parameters:"
         for key, value in project_parameters.items():
             message += f"\n\t- {key}: {value}"
-        logger.info(message)
+        LOGGER.info(message)
 
         # Create new directory for project files
         project_name_safe = "".join(c for c in project_parameters["project_name"] if c.isalnum() or c in (' ', '_', '-')).rstrip()
@@ -116,18 +116,18 @@ class Project:
         # if project JSON file already exists in selected directory, exit with an error to avoid overwriting existing project
         if project_dir.exists():
             error_message = f"A directory for the project already exists in the selected location: {project_dir}. Please select a different directory or remove the existing directory to avoid overwriting an existing project."
-            logger.error(error_message)
+            LOGGER.error(error_message)
             raise FileExistsError(error_message)
 
         project_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Created project directory at: {project_dir}")
+        LOGGER.info(f"Created project directory at: {project_dir}")
 
         project_json_file = project_dir / file_names.oregon_project_json_file_name
         project_json_file.touch(exist_ok=True)
 
         with open(project_json_file, 'w') as f:
             json.dump(project_parameters, f, indent=4)
-        logger.info(f"Created project JSON file at: {project_json_file}")
+        LOGGER.info(f"Created project JSON file at: {project_json_file}")
 
         # create directories in project dir
         archive_dir = project_dir / directory_names.archive_dir_name
@@ -139,9 +139,9 @@ class Project:
         create_dirs = [archive_dir, logs_dir, export_dir, detection_record_export_dir, event_record_export_dir]
         for dir in create_dirs:
             dir.mkdir(exist_ok=True)
-            logger.info(f"Created directory at: {dir}")
+            LOGGER.info(f"Created directory at: {dir}")
 
-        logger.info("Project creation complete.")
+        LOGGER.info("Project creation complete.")
 
     @classmethod
     def prompt_project_parameters(cls):
@@ -158,7 +158,6 @@ class Project:
 
     @classmethod
     def update_project_parameters(cls, project_dir: Path = None):
-        logger = get_logger(__name__)
 
         if project_dir is None:
             try:
@@ -198,16 +197,16 @@ class Project:
 
         if not expected_json_file.is_file():
             error_message = f"Project JSON file not found at expected location: {expected_json_file}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise InvalidProjectDirectoryError(error_message)
 
         for dir in expected_dirs:
             if not dir.is_dir():
                 error_message = f"Expected directory not found: {dir}"
-                self._logger.error(error_message)
+                LOGGER.error(error_message)
                 raise InvalidProjectDirectoryError(error_message)
 
-        self._logger.debug("Project directory validation complete.")
+        LOGGER.debug("Project directory validation complete.")
         return True
 
     def _load_project_parameters(self):
@@ -219,7 +218,7 @@ class Project:
             with open(self._project_json_file, 'r') as f:
                 data = json.load(f)
         except Exception as e:
-            self._logger.error(f"Failed to read project JSON file: {e}")
+            LOGGER.error(f"Failed to read project JSON file: {e}")
             raise RuntimeError(f"Failed to read project JSON file: {e}")
 
         self._software_version = self._load_project_parameter(data, "software_version", str)
@@ -231,7 +230,7 @@ class Project:
         Raises an error if the parameter is missing or if it has the wrong type.
         """
         if parameter_name not in data:
-            self._logger.error(f"Missing required parameter in project JSON file: {parameter_name}")
+            LOGGER.error(f"Missing required parameter in project JSON file: {parameter_name}")
             raise InvalidProjectDirectoryError(f"Missing required parameter in project JSON file: {parameter_name}")
 
         value = data[parameter_name]
@@ -239,7 +238,7 @@ class Project:
             value = expected_type(value)
         except (ValueError, TypeError) as e:
             error_message = f"Invalid type for parameter '{parameter_name}' in project JSON file. Cannot convert value '{value}' to {expected_type.__name__}: {e}"
-            self._logger.error(error_message)
+            LOGGER.error(error_message)
             raise InvalidProjectDirectoryError(error_message)
 
         return value

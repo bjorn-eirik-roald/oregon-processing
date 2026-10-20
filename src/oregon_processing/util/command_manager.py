@@ -7,6 +7,8 @@ and validating prompt signatures.
 """
 
 from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
+
 import time
 from serial import Serial
 
@@ -95,7 +97,6 @@ class CommandManager:
         connection :
             The communication interface to the Oregon device (e.g., a serial connection).
         """
-        self._logger = get_logger(__name__)
 
         self._connection: Serial = connection
         self._last_prompt_signature = None
@@ -174,7 +175,7 @@ class CommandManager:
                                 continue
                     except UnexpectedResponseError as e:
                         error_message = f"Error parsing line '{line}': {e}"
-                        self._logger.error(error_message)
+                        LOGGER.error(error_message)
                         pass
 
                 # Line doesn't start with valid signature, treat as data
@@ -210,7 +211,7 @@ class CommandManager:
             True if the command is valid, False otherwise.
         """
         if not command or not command.strip():
-            self._logger.warning("Empty command is not valid.")
+            LOGGER.warning("Empty command is not valid.")
             return False
 
         # Split at space to get the main command code
@@ -227,7 +228,7 @@ class CommandManager:
             if suffix and all(c.isdigit() for c in suffix):
                 return True
 
-        self._logger.warning(f"Command '{command}' is not valid.")
+        LOGGER.warning(f"Command '{command}' is not valid.")
         return False
 
     def _is_ready_prompt(self, line: str) -> bool:
@@ -299,7 +300,7 @@ class CommandManager:
 
         if not isinstance(signature, str):
             error_msg = f"Expected signature to be a string, got {type(signature)} instead."
-            self._logger.error(error_msg)
+            LOGGER.error(error_msg)
             raise UnexpectedResponseError(error_msg)
 
         if len(signature) != 4:
