@@ -7,7 +7,7 @@ Device Mode Manager for Oregon RFID
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from oregon_processing.util.exceptions import ModeChangeError
+from oregon_processing.exceptions import ModeChangeError
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)

@@ -22,7 +22,7 @@ LOGGER = get_logger(__name__)
 from oregon_processing.util.system_status import SystemStatusChecker, SystemStatus
 from oregon_processing.util.upload_history import UploadHistoryChecker, UploadHistory
 
-from oregon_processing.util.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UnexpectedResponseError, UserCancelledError
 
 
 class Communicator:

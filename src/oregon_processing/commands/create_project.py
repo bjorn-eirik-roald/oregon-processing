@@ -2,7 +2,7 @@ from oregon_processing.util.project import Project
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.exceptions import NoFileSelectedError, InvalidProjectDirectoryError, UserCancelledError
+from oregon_processing.exceptions import NoFileSelectedError, InvalidProjectDirectoryError, UserCancelledError
 
 def create_project():
 

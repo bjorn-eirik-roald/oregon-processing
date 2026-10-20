@@ -8,7 +8,7 @@ LOGGER = get_logger(__name__)
 
 from oregon_processing.util.command_manager import CommandManager
 from oregon_processing.util.device_mode_manager import DeviceModeManager
-from oregon_processing.util.exceptions import UnexpectedResponseError
+from oregon_processing.exceptions import UnexpectedResponseError
 
 
 class FormatManager:

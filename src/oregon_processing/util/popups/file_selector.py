@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 from pathlib import Path
 
-from oregon_processing.util.exceptions import NoFileSelectedError
+from oregon_processing.exceptions import NoFileSelectedError
 
 def browse_file(title="Select Excel file", accepted_file_types=[("Excel files", "*.xlsx *.xls")]) -> Path:
     """

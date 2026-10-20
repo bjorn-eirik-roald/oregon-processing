@@ -3,7 +3,7 @@ from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.exceptions import NoFileSelectedError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import NoFileSelectedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.device_mode_manager import DeviceModeManager
 
 from dataclasses import dataclass, field

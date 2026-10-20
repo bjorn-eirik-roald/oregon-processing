@@ -6,7 +6,7 @@ from pathlib import Path
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.exceptions import ConfigNotFoundError, InvalidConfigError
+from oregon_processing.exceptions import ConfigNotFoundError, InvalidConfigError
 
 class OregonConfig:
     """

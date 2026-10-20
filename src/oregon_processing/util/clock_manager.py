@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
+from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
 
 if TYPE_CHECKING:
     from oregon_processing.util.command_manager import CommandManager

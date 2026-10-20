@@ -12,7 +12,7 @@ LOGGER = get_logger(__name__)
 import time
 from serial import Serial
 
-from oregon_processing.util.exceptions import UnexpectedResponseError
+from oregon_processing.exceptions import UnexpectedResponseError
 
 
 class CommandManager:

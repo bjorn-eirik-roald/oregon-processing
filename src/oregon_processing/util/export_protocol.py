@@ -9,7 +9,7 @@ LOGGER = get_logger(__name__)
 
 from oregon_processing.util.clock_manager import ClockCheckResult
 from oregon_processing.util.device_health_checker import DeviceHealthReport
-from oregon_processing.util.exceptions import CommandTransmissionError, ConfigNotFoundError, ConnectionFailedError, DeviceHealthError, InvalidConfigError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import CommandTransmissionError, ConfigNotFoundError, ConnectionFailedError, DeviceHealthError, InvalidConfigError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.popups.yes_no_popup import prompt_yes_no
 from oregon_processing.util.project import Project
 from oregon_processing.util.system_status import SystemStatus

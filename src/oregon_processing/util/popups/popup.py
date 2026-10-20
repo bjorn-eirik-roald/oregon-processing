@@ -1,7 +1,7 @@
 import tkinter as tk
 import tkinter.font as tkfont
 
-from oregon_processing.util.exceptions import UserCancelledError # used for re import
+from oregon_processing.exceptions import UserCancelledError # used for re import
 
 class NMBUEntryFont:
     """

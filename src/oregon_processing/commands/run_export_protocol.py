@@ -3,7 +3,7 @@ Execute the export protocol to retrieve data from a Oregon RFID and store in dat
 """
 
 from oregon_processing.util.export_protocol import ExportProtocol
-from oregon_processing.util.exceptions import (ConfigNotFoundError, InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
+from oregon_processing.exceptions import (ConfigNotFoundError, InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
                                     CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError)
 
 

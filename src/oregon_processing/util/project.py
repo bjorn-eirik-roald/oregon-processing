@@ -5,7 +5,7 @@ import oregon_processing
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.exceptions import UserCancelledError, NoFileSelectedError, InvalidProjectDirectoryError
+from oregon_processing.exceptions import UserCancelledError, NoFileSelectedError, InvalidProjectDirectoryError
 
 from oregon_processing.util.popups.file_selector import browse_directory
 from oregon_processing.util.popups.name_popup import prompt_name

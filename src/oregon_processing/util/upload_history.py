@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from oregon_processing.util.command_manager import CommandManager
-from oregon_processing.util.exceptions import UnexpectedResponseError
+from oregon_processing.exceptions import UnexpectedResponseError
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 

@@ -4,7 +4,7 @@ Display an overview of the most recent record dates for each serial number in th
 
 from oregon_processing.util.database_manager import DatabaseManager
 from oregon_processing.util.project import Project
-from oregon_processing.util.exceptions import ConfigNotFoundError, InvalidConfigError
+from oregon_processing.exceptions import ConfigNotFoundError, InvalidConfigError
 
 def get_database_status():
 
