@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 
 from dataclasses import dataclass
-import re
 from oregon_processing.util.logging_manager import get_logger
 
 
@@ -15,104 +14,87 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DeviceHealthReport:
+class DeviceHealth:
     """Data class representing the health report of the Oregon RFID device."""
 
     healthy: bool
     critical_warnings: list[str]
     warnings: list[str]
 
-class DeviceHealthChecker:
-    """Manages system health checks for Oregon RFID device."""
+RECOMMENDED_VOLTAGE = 14.0
+CRITICAL_VOLTAGE_THRESHOLD = 12.5
+OLD_VERSION_THRESHOLD = 2.74
 
-    RECOMMENDED_VOLTAGE = 14.0
-    CRITICAL_VOLTAGE_THRESHOLD = 12.5
-    OLD_VERSION_THRESHOLD = 2.74
 
-    def __init__(self, session: ConnectionSession, system_status_checker: SystemStatusChecker):
-        """
-        Initialize DeviceHealthChecker.
+def check_device_health(session: ConnectionSession, system_status_checker: SystemStatusChecker) -> DeviceHealth:
+    """
+    Calls for system status and checks parsed system status for potential issues.
 
-        Parameters
-        ----------
-        session : ConnectionSession
-            Connection session instance for managing device commands.
-        system_status_checker : SystemStatusChecker
-            SystemStatusChecker instance for checking system status.
-        """
+    Returns
+    -------
+    DeviceHealth
+        Data class representing the health report of the Oregon RFID device.
+    """
 
-        self._system_status_checker = system_status_checker
-        self._session = session
+    LOGGER.debug("Initializing health check of Oregon RFID device.")
+    LOGGER.debug("Retrieving System Status.")
 
-    def check_device_health(self) -> DeviceHealthReport:
-        """
-        Calls for system status and checks parsed system status for potential issues.
+    critical_warnings = []
+    non_critical_warnings = []
 
-        Returns
-        -------
-        DeviceHealthReport
-            Data class representing the health report of the Oregon RFID device.
-        """
+    system_status: SystemStatus = system_status_checker.get_system_status()
+    prompt_prefix = session.prompt_prefix
 
-        LOGGER.debug("Initializing health check of Oregon RFID device.")
-        LOGGER.debug("Retrieving System Status.")
-
-        critical_warnings = []
-        non_critical_warnings = []
-
-        system_status: SystemStatus = self._system_status_checker.get_system_status()
-        prompt_prefix = self._session.prompt_prefix
-
-        # Check time synchronization status based on prompt signature (3rd character should be 'G' for GNSS sync)
-        if prompt_prefix[2] != 'G':
-            non_critical_warnings.append(
-                f"Device time is not synchronized to GNSS signals (current state: '{prompt_prefix[2]}')"
-            )
-
-        # Check firmware version
-        firmware_version: FirmwareVersion = system_status.version
-        if firmware_version.version_number < self.OLD_VERSION_THRESHOLD:
-            non_critical_warnings.append(
-                f"Device firmware version V{firmware_version.major}.{firmware_version.minor}{firmware_version.suffix or ''} is outdated (should be >= {self.OLD_VERSION_THRESHOLD})"
-            )
-
-        # Check supply voltage
-        voltage: float = system_status.supply_voltage
-
-        if voltage < self.RECOMMENDED_VOLTAGE:
-            non_critical_warnings.append(
-                f"Low supply voltage: {voltage}V (recommended to be >= {self.RECOMMENDED_VOLTAGE}V)"
-            )
-
-        if voltage < self.CRITICAL_VOLTAGE_THRESHOLD:
-            critical_warnings.append(
-                f"Critical low supply voltage: {voltage}V (must be >= {self.CRITICAL_VOLTAGE_THRESHOLD}V)"
-            )
-
-        health_report = DeviceHealthReport(
-            healthy=len(critical_warnings) == 0 and len(non_critical_warnings) == 0,
-            critical_warnings=critical_warnings,
-            warnings=non_critical_warnings
+    # Check time synchronization status based on prompt signature (3rd character should be 'G' for GNSS sync)
+    if prompt_prefix[2] != 'G':
+        non_critical_warnings.append(
+            f"Device time is not synchronized to GNSS signals (current state: '{prompt_prefix[2]}')"
         )
 
-        # Report health status
-        if not health_report.healthy:
-            total_issues = len(critical_warnings) + len(non_critical_warnings)
-            warning_message = f"Device health check detected {total_issues} issue(s)."
+    # Check firmware version
+    firmware_version: FirmwareVersion = system_status.version
+    if firmware_version.version_number < OLD_VERSION_THRESHOLD:
+        non_critical_warnings.append(
+            f"Device firmware version V{firmware_version.major}.{firmware_version.minor}{firmware_version.suffix or ''} is outdated (should be >= {OLD_VERSION_THRESHOLD})"
+        )
 
-            if critical_warnings:
-                warning_message += "\n    Critical:"
-                for warning in critical_warnings:
-                    warning_message += f"\n      - {warning}"
+    # Check supply voltage
+    voltage: float = system_status.supply_voltage
 
-            if non_critical_warnings:
-                warning_message += "\n    Non-critical:"
-                for warning in non_critical_warnings:
-                    warning_message += f"\n      - {warning}"
+    if voltage < RECOMMENDED_VOLTAGE:
+        non_critical_warnings.append(
+            f"Low supply voltage: {voltage}V (recommended to be >= {RECOMMENDED_VOLTAGE}V)"
+        )
 
-            LOGGER.warning(warning_message)
+    if voltage < CRITICAL_VOLTAGE_THRESHOLD:
+        critical_warnings.append(
+            f"Critical low supply voltage: {voltage}V (must be >= {CRITICAL_VOLTAGE_THRESHOLD}V)"
+        )
 
-        else:
-            LOGGER.info("Device health check passed. All parameters within normal range.")
+    health_report = DeviceHealth(
+        healthy=len(critical_warnings) == 0 and len(non_critical_warnings) == 0,
+        critical_warnings=critical_warnings,
+        warnings=non_critical_warnings
+    )
 
-        return health_report
+    # Report health status
+    if not health_report.healthy:
+        total_issues = len(critical_warnings) + len(non_critical_warnings)
+        warning_message = f"Device health check detected {total_issues} issue(s)."
+
+        if critical_warnings:
+            warning_message += "\n    Critical:"
+            for warning in critical_warnings:
+                warning_message += f"\n      - {warning}"
+
+        if non_critical_warnings:
+            warning_message += "\n    Non-critical:"
+            for warning in non_critical_warnings:
+                warning_message += f"\n      - {warning}"
+
+        LOGGER.warning(warning_message)
+
+    else:
+        LOGGER.info("Device health check passed. All parameters within normal range.")
+
+    return health_report
