@@ -11,7 +11,7 @@ from oregon_processing.core.device_clock import ClockCheckResult
 from oregon_processing.core.device_health import DeviceHealth
 from oregon_processing.exceptions import CommandTransmissionError, ConfigNotFoundError, ConnectionFailedError, DeviceHealthError, InvalidConfigError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
-from oregon_processing.core.project import Project
+from oregon_processing.core.project import Project, set_project
 from oregon_processing.core.device_status import DeviceStatus
 
 class ExportProtocol:
@@ -51,27 +51,26 @@ class ExportProtocol:
                     last_project_dir = None
 
             self._project = Project(project_dir=last_project_dir)
+            set_project(self._project)
 
             # update config with last used project directory
             config.last_project_dir = self._project.project_dir
 
-
             # Set up logging with crash logs directory
-            crash_log_file = DatabaseManager.prepare_crash_log_file(self._project)
+            crash_log_file = DatabaseManager.prepare_crash_log_file()
             self._logging_manager = self._exit_stack.enter_context(
                 LoggingManager(
                     write_to_console = True,
                     write_to_report_file = True,
-                    report_file = crash_log_file,
-                    relative_base_paths = {"output_dir": self._project.project_dir}
+                    report_file = crash_log_file
                     )
-            )
+                )
 
             self._communicator = self._exit_stack.enter_context(Communicator())
 
-            devicestatus: DeviceStatus = self._communicator.get_devicestatus()
-            self._database_manager = DatabaseManager(self._project)
-            self._database_manager.prepare_directories(devicestatus.serial_number)
+            device_status: DeviceStatus = self._communicator.get_device_status()
+            self._database_manager = DatabaseManager()
+            self._database_manager.prepare_directories(device_status.serial_number)
 
             # Update log file to final location
             report_file_dir = self._database_manager.logs_dir

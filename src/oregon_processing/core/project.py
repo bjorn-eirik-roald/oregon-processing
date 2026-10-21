@@ -13,6 +13,7 @@ from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
 from oregon_processing.util.directory_names import directory_names
 from oregon_processing.util.file_names import file_names
 
+
 class Project:
     def __init__(self, project_dir: Path = None):
 
@@ -243,23 +244,16 @@ class Project:
 
         return value
 
-if __name__ == "__main__":
+CACHED_PROJECT: Project = None
+def get_project() -> Project:
+    global CACHED_PROJECT
+    if CACHED_PROJECT is None:
+        error_msg = "Project has not been initialized. Run set_project() first."
+        LOGGER.error(error_msg)
+        raise RuntimeError(error_msg)
+    return CACHED_PROJECT
 
-    try:
-        Project.create_new_project()
-    except UserCancelledError:
-        print("Project creation cancelled by user.")
-
-    try:
-        project = Project()
-        print(f"Project '{project._project_name}' loaded successfully with parameters:")
-        print(f"\t- Software version: {project._software_version}")
-
-    except UserCancelledError:
-        print("Project loading cancelled by user.")
-
-    try:
-        Project.update_project_parameters()
-        print("Project parameters updated successfully.")
-    except UserCancelledError:
-        print("Project update cancelled by user.")
+def set_project(project: Project):
+    global CACHED_PROJECT
+    CACHED_PROJECT = project
+    LOGGER.debug(f"Project set: {project._project_name}")

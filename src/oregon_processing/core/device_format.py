@@ -52,7 +52,7 @@ class FormatInfo:
 
 
 
-def get_format_info(session: ConnectionSession, devicestatus_checker: DeviceStatusChecker) -> FormatInfo:
+def get_format_info(session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> FormatInfo:
     """
     Fetch and parse the detection record format from the device using the FM command.
 
@@ -64,15 +64,15 @@ def get_format_info(session: ConnectionSession, devicestatus_checker: DeviceStat
     """
 
     old_mode = None
-    mode = get_current_mode(devicestatus_checker)
+    mode = get_current_mode(device_status_checker)
     if mode.lower() != 'standby':
         old_mode = mode
-        change_mode(session, devicestatus_checker, DeviceMode.STANDBY)
+        change_mode(session, device_status_checker, DeviceMode.STANDBY)
 
     response_lines = session.send_command(DeviceCommand.FM)
 
     if old_mode:
-        change_mode(session, devicestatus_checker, old_mode)
+        change_mode(session, device_status_checker, old_mode)
 
     if len(response_lines) != 1:
         error_message = f"Unexpected number of lines in FM response: {len(response_lines)}. Response: {response_lines}"
@@ -95,7 +95,7 @@ def get_format_info(session: ConnectionSession, devicestatus_checker: DeviceStat
         field_names=field_names,
     )
 
-def set_detection_record_format(session: ConnectionSession, devicestatus_checker: DeviceStatusChecker, format_string: str) -> bool:
+def set_detection_record_format(session: ConnectionSession, device_status_checker: DeviceStatusChecker, format_string: str) -> bool:
     """
     Set the detection record format on the device using the FM command.
 
@@ -103,7 +103,7 @@ def set_detection_record_format(session: ConnectionSession, devicestatus_checker
     ----------
     session : ConnectionSession
         The connection session to communicate with the device.
-    devicestatus_checker : DeviceStatusChecker
+    device_status_checker : DeviceStatusChecker
         The device status checker to manage device modes.
     format_string : str
         The format string to set (e.g., "DTY ARR SPC TRF DUR SPC TTY SPC TAG SCD NCD EFA")
@@ -122,7 +122,7 @@ def set_detection_record_format(session: ConnectionSession, devicestatus_checker
         session.send_command(DeviceCommand.FM, format_string)
 
         # Verify the format was set and update cache
-        detection_record_format: FormatInfo = get_format_info(session, devicestatus_checker)
+        detection_record_format: FormatInfo = get_format_info(session, device_status_checker)
 
         if detection_record_format.columns_raw == format_string:
             LOGGER.info(f"Detection record format set successfully to '{format_string}'")

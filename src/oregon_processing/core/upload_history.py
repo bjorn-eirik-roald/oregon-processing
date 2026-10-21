@@ -30,7 +30,7 @@ class UploadHistory:
     total_records: int = 0
     raw_output: str = ""
 
-def get_upload_history(session: ConnectionSession, devicestatus_checker: DeviceStatusChecker) -> UploadHistory:
+def get_upload_history(session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> UploadHistory:
     """
     Parse upload history output from UH command.
 
@@ -38,15 +38,15 @@ def get_upload_history(session: ConnectionSession, devicestatus_checker: DeviceS
     -------
     UploadHistory
     """
-    old_mode = get_current_mode(devicestatus_checker)
+    old_mode = get_current_mode(device_status_checker)
     if old_mode.lower() != DeviceMode.STANDBY.value.lower():
-        change_mode(session, devicestatus_checker, DeviceMode.STANDBY)
+        change_mode(session, device_status_checker, DeviceMode.STANDBY)
 
     try:
         upload_history_lines = session.send_command(DeviceCommand.UH)
     finally:
         if old_mode.lower() != DeviceMode.STANDBY.value.lower():
-            change_mode(session, devicestatus_checker, old_mode)
+            change_mode(session, device_status_checker, old_mode)
 
     upload_history: UploadHistory = UploadHistory()
     upload_history.raw_output = "\n".join(upload_history_lines)

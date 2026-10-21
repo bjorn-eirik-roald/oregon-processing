@@ -138,7 +138,7 @@ class DeviceStatusChecker:
 
         self._ignored_lines: list[str] = []
 
-    def get_devicestatus(self) -> DeviceStatus:
+    def get_device_status(self) -> DeviceStatus:
 
         status_lines = self._session.send_command(DeviceCommand.SY)
 

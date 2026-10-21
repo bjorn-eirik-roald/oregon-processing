@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.core.project import Project
+from oregon_processing.core.project import Project, get_project
 from oregon_processing.util.util_functions import extract_filename_date
 
 from datetime import date, datetime, timedelta
@@ -19,7 +19,7 @@ class DatabaseManager:
 
     DEFAULT_FIRST_DATE = date(2018, 1, 1)
 
-    def __init__(self, project: Project):
+    def __init__(self):
         """
         Initialize DatabaseManager.
 
@@ -29,13 +29,13 @@ class DatabaseManager:
             Project instance for data directory
         """
 
-        self._project = project
+        self._project: Project = get_project()
 
         # Root directories
-        self._project_dir = project.project_dir
-        self._log_dir = project.logs_dir
-        self._crash_log_dir = project.crash_logs_dir
-        self._export_dir = project.export_dir
+        self._project_dir = self._project.project_dir
+        self._log_dir = self._project.logs_dir
+        self._crash_log_dir = self._project.crash_logs_dir
+        self._export_dir = self._project.export_dir
 
         # Export data subdirectories
         self._detection_records_dir = None
@@ -190,8 +190,11 @@ class DatabaseManager:
         return last_exported_dates
 
     @classmethod
-    def prepare_crash_log_file(cls, project: Project) -> Path:
+    def prepare_crash_log_file(cls) -> Path:
         """Prepare and return the crash logs directory path."""
+
+        from oregon_processing.core.project import get_project
+        project = get_project()
         crash_logs_dir = project.crash_logs_dir
         crash_logs_dir.mkdir(parents=True, exist_ok=True)
 

@@ -51,7 +51,7 @@ def is_valid_mode(mode_name: str) -> bool:
 
 def get_current_mode(status_checker: DeviceStatusChecker) -> str:
     """Get current operating mode from SY status parsing."""
-    status = status_checker.get_devicestatus()
+    status = status_checker.get_device_status()
     return status.mode
 
 

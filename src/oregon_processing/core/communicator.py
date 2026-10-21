@@ -24,7 +24,7 @@ class Communicator:
 
         self._session: ConnectionSession = None
 
-        self._devicestatus_checker: DeviceStatusChecker = None
+        self._device_status_checker: DeviceStatusChecker = None
 
         self._last_upload_date = None
         self._reader_name = None
@@ -44,7 +44,7 @@ class Communicator:
             if connection_result.success:
 
                 self._session: ConnectionSession = self._exit_stack.enter_context(connection_result.session)
-                self._devicestatus_checker = DeviceStatusChecker(self._session)
+                self._device_status_checker = DeviceStatusChecker(self._session)
                 self._post_connect_handshake()
 
             else:
@@ -81,14 +81,14 @@ class Communicator:
 
         LOGGER.info("Interactive terminal session ended.")
 
-    def get_devicestatus(self) -> DeviceStatus:
-        return self._devicestatus_checker.get_devicestatus()
+    def get_device_status(self) -> DeviceStatus:
+        return self._device_status_checker.get_device_status()
 
     def get_device_mode(self) -> DeviceMode:
-        return get_current_mode(self._session, self._devicestatus_checker)
+        return get_current_mode(self._session, self._device_status_checker)
 
     def check_device_health(self):
-        health_report: DeviceHealth = get_device_health_report(self._session, self._devicestatus_checker)
+        health_report: DeviceHealth = get_device_health_report(self._session, self._device_status_checker)
         return health_report
 
     def control_device_datetime(self, tolerance_seconds: int = 15, attempt_sync: bool = True) -> dict:
@@ -100,10 +100,10 @@ class Communicator:
         return clock_check_result
 
     def export_detection_records(self, dates: list[str], output_dir: Path) -> bool:
-        success: bool = export_detection_records(dates, output_dir, self._session, self._devicestatus_checker)
+        success: bool = export_detection_records(dates, output_dir, self._session, self._device_status_checker)
         return success
 
     def _post_connect_handshake(self):
         LOGGER.debug("Starting post-connection handshake.")
-        devicestatus: DeviceStatus = self._devicestatus_checker.get_devicestatus()
-        LOGGER.info(f"Connected to device '{devicestatus.reader_name}' of type '{devicestatus.device_type}' with serial number '{devicestatus.serial_number}'.")
+        device_status: DeviceStatus = self._device_status_checker.get_device_status()
+        LOGGER.info(f"Connected to device '{device_status.reader_name}' of type '{device_status.device_type}' with serial number '{device_status.serial_number}'.")
