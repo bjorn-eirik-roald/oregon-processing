@@ -1,10 +1,10 @@
-from oregon_processing.util.communication import ConnectionSession, DeviceCommand
+from oregon_processing.core.communication import ConnectionSession, DeviceCommand
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
 
 from oregon_processing.exceptions import NoFileSelectedError, UnexpectedResponseError, UserCancelledError
-from oregon_processing.util.device_mode_manager import DeviceModeManager
+from oregon_processing.core.device_mode import is_valid_mode
 
 from dataclasses import dataclass, field
 from typing import Optional, ClassVar
@@ -79,13 +79,12 @@ class FirmwareVersion:
             raise UnexpectedResponseError(f"Invalid version string format: {version_str}")
 
 @dataclass
-class SystemStatus:
-    """Class to represent the system status and prerequisites for Oregon RFID processing."""
+class DeviceStatus:
+    """Class to represent the device status and prerequisites for Oregon RFID processing."""
 
     # --- Class constants (NOT dataclass fields) ---
     MUST_HAVE_FIELDS: ClassVar[list[str]] = ['device_type', 'version', 'serial_number', 'reader_name', 'mode']
     ACCEPTED_DEVICE_TYPES: ClassVar[list[str]] = ['orsr', 'ormr']
-    ACCEPTED_MODES: ClassVar[list[str]] = [mode.lower() for mode in DeviceModeManager.accepted_modes()]
 
     # --- Data fields ---
     device_type: Optional[str] = None
@@ -120,33 +119,30 @@ class SystemStatus:
                 f"Only {self.ACCEPTED_DEVICE_TYPES} are supported."
             )
 
-        if self.mode.lower() not in self.ACCEPTED_MODES:
-            raise UnexpectedResponseError(
-                f"Unsupported device mode '{self.mode}'. "
-                f"Expected one of: {self.ACCEPTED_MODES}"
-            )
+        if not is_valid_mode(self.mode):
+            raise UnexpectedResponseError(f"Unsupported device mode '{self.mode}'.")
 
         for field_name in self.MUST_HAVE_FIELDS:
             value = getattr(self, field_name)
             if not value:
                 raise UnexpectedResponseError(
-                    f"Missing expected field '{field_name}' in system status. "
+                    f"Missing expected field '{field_name}' in device status. "
                     f"Value: '{value}'"
                 )
 
-class SystemStatusChecker:
-    """Class to check system status and prerequisites for Oregon RFID processing."""
+class DeviceStatusChecker:
+    """Class to check device status and prerequisites for Oregon RFID processing."""
 
     def __init__(self, session: ConnectionSession):
         self._session: ConnectionSession = session
 
         self._ignored_lines: list[str] = []
 
-    def get_system_status(self) -> SystemStatus:
+    def get_devicestatus(self) -> DeviceStatus:
 
         status_lines = self._session.send_command(DeviceCommand.SY)
 
-        status = SystemStatus()  # create empty SystemStatus
+        status = DeviceStatus()  # create empty DeviceStatus
 
         # Validate we have at least 3 lines to parse the row 1-3, which are always in the same rows.
         if len(status_lines) < 3:
@@ -179,13 +175,13 @@ class SystemStatusChecker:
         try:
             status.check_prerequisites()  # validate prerequisites
         except UnexpectedResponseError as e:
-            error_message = f"System status prerequisites check failed: {str(e)}"
+            error_message = f"Device status prerequisites check failed: {str(e)}"
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
         return status
 
-    def _parse_line_1(self, line: str, status: SystemStatus):
+    def _parse_line_1(self, line: str, status: DeviceStatus):
         match = re.search(r"^Oregon RFID\s+(.*)$", line, re.IGNORECASE)
         if not match:
             error_message = f"Unexpected device type line format at row 1 of SY response: '{line}'"
@@ -203,7 +199,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _parse_line_2(self, line: str, status: SystemStatus):
+    def _parse_line_2(self, line: str, status: DeviceStatus):
         match = re.search(r"^(V[0-9]+\.[0-9]+[A-Z]*)\s+([0-9A-Fa-f\-]+)$", line)
         if not match:
             error_message = f"Unexpected version/serial line format at row 2 of SY response: '{line}'"
@@ -224,10 +220,10 @@ class SystemStatusChecker:
         status.version = version
         status.serial_number = serial_number_str
 
-    def _parse_line_3(self, line: str, status: SystemStatus):
+    def _parse_line_3(self, line: str, status: DeviceStatus):
         status.reader_name = line
 
-    def _auto_parse_line(self, line: str, line_num: int, status: SystemStatus):
+    def _auto_parse_line(self, line: str, line_num: int, status: DeviceStatus):
 
         match = False
         if not match: match: bool = self._attempt_parse_mode_line(line=line, line_num=line_num, status=status)
@@ -249,7 +245,7 @@ class SystemStatusChecker:
         if not match:
             self._handle_unrecognized_line(line=line, line_num=line_num)
 
-    def _attempt_parse_mode_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_mode_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
 
         match = re.search(r"^(.*?)\s+mode\s*", line, re.IGNORECASE)
         if not match:
@@ -258,7 +254,7 @@ class SystemStatusChecker:
             mode = match.group(1).strip()
 
         # validate mode is one of expected values
-        if not DeviceModeManager.is_valid_mode(mode):
+        if not is_valid_mode(mode):
             error_message = f"Unexpected mode value parsed from SY response: '{mode}' in line {line_num + 1}: '{line}'"
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
@@ -266,7 +262,7 @@ class SystemStatusChecker:
         status.mode = mode
         return True
 
-    def _attempt_parse_supply_voltage_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_supply_voltage_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^supply voltage\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -281,7 +277,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_charge_pulse_amps_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_charge_pulse_amps_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^charge pulse amps\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -296,7 +292,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_listen_amps_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_listen_amps_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^listen amps\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -311,7 +307,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_effective_amps_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_effective_amps_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^effective amps\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -326,7 +322,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_standby_amps_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_standby_amps_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^standby amps\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -341,7 +337,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_sleep_amps_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_sleep_amps_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^sleep amps\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -356,7 +352,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_noise_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_noise_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^noise\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -371,7 +367,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_antenna_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_antenna_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^antenna\s+#([0-9]+)\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
 
         if not match:
@@ -401,7 +397,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_shutdown_supercap_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_shutdown_supercap_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^shutdown supercap\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -416,7 +412,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_shutdown_supply_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_shutdown_supply_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^shutdown supply\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -431,7 +427,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_sleep_battery_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_sleep_battery_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^sleep battery\s+([0-9]+(?:\.[0-9]+)?)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -446,7 +442,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_tags_in_archive_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_tags_in_archive_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^tags in archive\s+([0-9]+)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -461,7 +457,7 @@ class SystemStatusChecker:
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)
 
-    def _attempt_parse_bluetooth_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_bluetooth_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^bluetooth\s+is\s+(on|off)$", line, re.IGNORECASE)
         if not match:
             return False
@@ -471,7 +467,7 @@ class SystemStatusChecker:
         status.bluetooth_status = bluetooth_status
         return True
 
-    def _attempt_parse_gnss_log_line(self, line: str, line_num: int, status: SystemStatus) -> bool:
+    def _attempt_parse_gnss_log_line(self, line: str, line_num: int, status: DeviceStatus) -> bool:
         match = re.search(r"^gnss logged every\s+([0-9]+)\s+minutes$|^gnss log is off$", line, re.IGNORECASE)
 
         if not match:
@@ -496,7 +492,7 @@ class SystemStatusChecker:
     def _handle_unrecognized_line(self, line: str, line_num: int):
         """
 
-        Handle an unrecognized line in the system status response.
+        Handle an unrecognized line in the device status response.
 
 
         Will prompt the user with a popup to confirm that the unrecognized line is not a problem for processing. This allows us to continue with processing
@@ -505,19 +501,19 @@ class SystemStatusChecker:
         Returns True if the user approves the unrecognized line, False if the user does not approve and wants to treat it as an error.
         """
 
-        from oregon_processing.util.popups.yes_no_popup import prompt_yes_no
+        from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
 
         try:
-            answer = prompt_yes_no(f"Unrecognized line in system status response: '{line}'\n\nDo you want to ignore this line and continue with processing?",
+            answer = prompt_yes_no(f"Unrecognized line in device status response: '{line}'\n\nDo you want to ignore this line and continue with processing?",
                                    window_height=200, window_width=800)
         except (UserCancelledError, NoFileSelectedError):
             print("\n\nUnrecognized line approval cancelled by user. Aborting export protocol.\n\n")
             raise UserCancelledError
 
         if answer:
-            LOGGER.warning(f"Unrecognized line in system status at row {line_num + 1} of SY response: '{line}' - User approved to ignore.")
+            LOGGER.warning(f"Unrecognized line in device status at row {line_num + 1} of SY response: '{line}' - User approved to ignore.")
             self._ignored_lines.append(line)
         else:
-            error_message = f"Unrecognized line format in system status at row {line_num + 1} of SY response: '{line}'. User did not approve to ignore."
+            error_message = f"Unrecognized line format in device status at row {line_num + 1} of SY response: '{line}'. User did not approve to ignore."
             LOGGER.error(error_message)
             raise UnexpectedResponseError(error_message)

@@ -9,8 +9,8 @@ from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from oregon_processing.util.communication import ConnectionSession
-    from oregon_processing.util.system_status import FirmwareVersion, SystemStatus, SystemStatusChecker
+    from oregon_processing.core.communication import ConnectionSession
+    from oregon_processing.core.device_status import FirmwareVersion, DeviceStatus, DeviceStatusChecker
 
 
 @dataclass
@@ -26,9 +26,9 @@ CRITICAL_VOLTAGE_THRESHOLD = 12.5
 OLD_VERSION_THRESHOLD = 2.74
 
 
-def check_device_health(session: ConnectionSession, system_status_checker: SystemStatusChecker) -> DeviceHealth:
+def check_device_health(session: ConnectionSession, devicestatus_checker: DeviceStatusChecker) -> DeviceHealth:
     """
-    Calls for system status and checks parsed system status for potential issues.
+    Calls for device status and checks parsed device status for potential issues.
 
     Returns
     -------
@@ -37,12 +37,12 @@ def check_device_health(session: ConnectionSession, system_status_checker: Syste
     """
 
     LOGGER.debug("Initializing health check of Oregon RFID device.")
-    LOGGER.debug("Retrieving System Status.")
+    LOGGER.debug("Retrieving Device Status.")
 
     critical_warnings = []
     non_critical_warnings = []
 
-    system_status: SystemStatus = system_status_checker.get_system_status()
+    devicestatus: DeviceStatus = devicestatus_checker.get_devicestatus()
     prompt_prefix = session.prompt_prefix
 
     # Check time synchronization status based on prompt signature (3rd character should be 'G' for GNSS sync)
@@ -52,14 +52,14 @@ def check_device_health(session: ConnectionSession, system_status_checker: Syste
         )
 
     # Check firmware version
-    firmware_version: FirmwareVersion = system_status.version
+    firmware_version: FirmwareVersion = devicestatus.version
     if firmware_version.version_number < OLD_VERSION_THRESHOLD:
         non_critical_warnings.append(
             f"Device firmware version V{firmware_version.major}.{firmware_version.minor}{firmware_version.suffix or ''} is outdated (should be >= {OLD_VERSION_THRESHOLD})"
         )
 
     # Check supply voltage
-    voltage: float = system_status.supply_voltage
+    voltage: float = devicestatus.supply_voltage
 
     if voltage < RECOMMENDED_VOLTAGE:
         non_critical_warnings.append(

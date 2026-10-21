@@ -3,14 +3,11 @@ from dataclasses import dataclass
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.communicator import Communicator
-from oregon_processing.util.project import Project
+from oregon_processing.core.project import Project
 from oregon_processing.util.util_functions import extract_filename_date
 
 from datetime import date, datetime, timedelta
 from pathlib import Path
-
-from oregon_processing.util.system_status import SystemStatus
 
 @dataclass
 class ExportDates:
@@ -115,8 +112,8 @@ class DatabaseManager:
 
         LOGGER.debug("Extracting dates from filenames...")
 
-        detection_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in detection_record_files)
-        event_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in event_record_files)
+        detection_record_dates = set(extract_filename_date(f.name) for f in detection_record_files)
+        event_record_dates = set(extract_filename_date(f.name) for f in event_record_files)
 
         # Generate expected date range from DEFAULT_FIRST_DATE to today
         today = date.today()
@@ -184,7 +181,7 @@ class DatabaseManager:
                 last_exported_dates[serial] = None
                 continue
 
-            detection_record_dates = set(extract_filename_date(f.name, logger=LOGGER) for f in detection_record_files)
+            detection_record_dates = set(extract_filename_date(f.name) for f in detection_record_files)
 
             last_exported_date = max(detection_record_dates)
             LOGGER.debug(f"Last exported date based on existing detection record files: {last_exported_date}")

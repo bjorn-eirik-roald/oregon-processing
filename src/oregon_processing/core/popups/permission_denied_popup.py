@@ -2,7 +2,7 @@ import tkinter as tk
 import time
 from pathlib import Path
 
-from oregon_processing.util.popups.popup import Popup, NMBUPromptFont, UserCancelledError
+from oregon_processing.core.popups.popup import Popup, NMBUPromptFont, UserCancelledError
 
 class PermissionDeniedMainPrompt(Popup):
 

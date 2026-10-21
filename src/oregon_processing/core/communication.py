@@ -149,11 +149,6 @@ class ConnectionSession:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-        return False
-
-    @property
-    def connection(self) -> Serial:
-        return self._connection
 
     @property
     def is_connected(self) -> bool:

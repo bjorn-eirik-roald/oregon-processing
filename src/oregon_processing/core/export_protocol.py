@@ -1,18 +1,18 @@
 from contextlib import ExitStack
 from datetime import datetime
 
-from oregon_processing.util.communicator import Communicator
+from oregon_processing.core.communicator import Communicator
 from oregon_processing.util.config import OregonConfig
-from oregon_processing.util.database_manager import DatabaseManager, ExportDates
+from oregon_processing.core.database_manager import DatabaseManager, ExportDates
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.clock_manager import ClockCheckResult
-from oregon_processing.util.device_health_checker import DeviceHealthReport
+from oregon_processing.core.device_clock import ClockCheckResult
+from oregon_processing.core.device_health import DeviceHealth
 from oregon_processing.exceptions import CommandTransmissionError, ConfigNotFoundError, ConnectionFailedError, DeviceHealthError, InvalidConfigError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
-from oregon_processing.util.popups.yes_no_popup import prompt_yes_no
-from oregon_processing.util.project import Project
-from oregon_processing.util.system_status import SystemStatus
+from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
+from oregon_processing.core.project import Project
+from oregon_processing.core.device_status import DeviceStatus
 
 class ExportProtocol:
 
@@ -69,9 +69,9 @@ class ExportProtocol:
 
             self._communicator = self._exit_stack.enter_context(Communicator())
 
-            system_status: SystemStatus = self._communicator.get_system_status()
+            devicestatus: DeviceStatus = self._communicator.get_devicestatus()
             self._database_manager = DatabaseManager(self._project)
-            self._database_manager.prepare_directories(system_status.serial_number)
+            self._database_manager.prepare_directories(devicestatus.serial_number)
 
             # Update log file to final location
             report_file_dir = self._database_manager.logs_dir
@@ -102,7 +102,7 @@ class ExportProtocol:
             return
 
         # Execute device health check on device
-        health_report: DeviceHealthReport = self._communicator.check_device_health()
+        health_report: DeviceHealth = self._communicator.check_device_health()
         if len(health_report.critical_warnings) > 0:
             error_message = "Device health check failed. Please address the following critical issues before proceeding: \n  -" + "\n  -".join(health_report.critical_warnings)
             LOGGER.error(error_message)

@@ -1,4 +1,4 @@
-from oregon_processing.util.project import Project
+from oregon_processing.core.project import Project
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
 

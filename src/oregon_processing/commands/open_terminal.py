@@ -3,7 +3,7 @@ from oregon_processing.exceptions import (ConfigNotFoundError, InvalidConfigErro
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.util.communicator import Communicator
+from oregon_processing.core.communicator import Communicator
 
 def open_terminal():
 

@@ -1,7 +1,11 @@
 import re
 from datetime import date
 
-def extract_filename_date(filename: str, logger=None) -> date:
+from oregon_processing.util.logging_manager import get_logger
+
+LOGGER = get_logger(__name__)
+
+def extract_filename_date(filename: str) -> date:
     """
     Extract date from filename in format: *_YYYY_MM_DD.ext
 
@@ -28,11 +32,9 @@ def extract_filename_date(filename: str, logger=None) -> date:
             return date(year, month, day)
         except ValueError:
             error_message = f"Date components extracted from filename are not valid: {year}-{month}-{day}"
-            if logger:
-                logger.error(error_message)
+            LOGGER.error(error_message)
             raise ValueError(error_message)
     else:
         error_message = f"Filename does not contain a valid date in the expected format: {filename}"
-        if logger:
-            logger.error(error_message)
+        LOGGER.error(error_message)
         raise ValueError(error_message)

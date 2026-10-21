@@ -1,19 +1,33 @@
 from serial import Serial
 from serial.tools import list_ports
 
-from oregon_processing.util.communication import ConnectionSession
+from oregon_processing.core.communication import ConnectionSession
 from oregon_processing.util.logging_manager import get_logger
+from oregon_processing.core.device_status import DeviceStatusChecker
 
 LOGGER = get_logger(__name__)
 BAUD_RATE = 115200
 
+class NotApplicableObject:
+    """Class to represent a not applicable object for optional fields."""
+
+    def __repr__(self):
+        return "<NotApplicableObject>"
+
+    def __bool__(self):
+        return False
+
+NOT_APPLICABLE = NotApplicableObject()
 
 class ConnectionResult:
-    def __init__(self, success: bool, session: ConnectionSession | None = None, port: str | None = None, error_message: str | None = None):
+    def __init__(self, success: bool, session:
+                 ConnectionSession | NotApplicableObject = NOT_APPLICABLE,
+                 port: str | NotApplicableObject = NOT_APPLICABLE,
+                 error_message: str = ""):
         self.success: bool = success
-        self.session: ConnectionSession = session
-        self.port: str = port
-        self.error_message: str = error_message
+        self.session: ConnectionSession | NotApplicableObject = session
+        self.port: str | NotApplicableObject = port
+        self.error_message: str | None = error_message
 
 
 def connect() -> ConnectionResult:

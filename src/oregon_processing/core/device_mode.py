@@ -4,13 +4,13 @@ from enum import Enum
 
 from oregon_processing.exceptions import ModeChangeError
 from oregon_processing.util.logging_manager import get_logger
-from oregon_processing.util.communication import DeviceCommand
+from oregon_processing.core.communication import DeviceCommand
 
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from oregon_processing.util.communication import ConnectionSession
-    from oregon_processing.util.system_status import SystemStatusChecker
+    from oregon_processing.core.communication import ConnectionSession
+    from oregon_processing.core.device_status import DeviceStatusChecker
 
 
 class DeviceMode(str, Enum):
@@ -49,15 +49,15 @@ def is_valid_mode(mode_name: str) -> bool:
     return True
 
 
-def get_current_mode(status_checker: SystemStatusChecker) -> str:
+def get_current_mode(status_checker: DeviceStatusChecker) -> str:
     """Get current operating mode from SY status parsing."""
-    status = status_checker.get_system_status()
+    status = status_checker.get_devicestatus()
     return status.mode
 
 
 def change_mode(
     session: ConnectionSession,
-    status_checker: SystemStatusChecker,
+    status_checker: DeviceStatusChecker,
     mode_name: str | DeviceMode,
 ) -> bool:
     """Change device operating mode and verify transition."""

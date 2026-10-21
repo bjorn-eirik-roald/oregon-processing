@@ -24,12 +24,19 @@ class UserCancelledError(Exception):
 
 class DeviceHealthError(Exception):
     """Error for when device health check fails or device clock is not in sync."""
+    pass
 
 class ClockSyncError(Exception):
     """Raised when device clock is not synchronized within acceptable tolerance."""
+    pass
 
 class ModeChangeError(Exception):
     """Raised when a device mode change fails."""
+    pass
+
+class FormatChangeError(Exception):
+    """Raised when a detection record format change fails."""
+    pass
 
 class NoFileSelectedError(Exception):
     """Raised when no file is selected."""
@@ -39,3 +46,6 @@ class InvalidProjectDirectoryError(Exception):
     """Raised when the project directory is invalid."""
     pass
 
+class ExportFailedError(Exception):
+    """Raised when exporting detection records fails."""
+    pass

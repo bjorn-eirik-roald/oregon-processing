@@ -1,5 +1,5 @@
 import tkinter as tk
-from oregon_processing.util.popups.popup import Popup, UserCancelledError, NMBUPromptFont
+from oregon_processing.core.popups.popup import Popup, UserCancelledError, NMBUPromptFont
 
 class SelectEmployeeRolePopup(Popup):
 

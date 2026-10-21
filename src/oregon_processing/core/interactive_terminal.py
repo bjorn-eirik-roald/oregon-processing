@@ -1,4 +1,4 @@
-from oregon_processing.util.communication import is_valid_command
+from oregon_processing.core.communication import is_valid_command
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
