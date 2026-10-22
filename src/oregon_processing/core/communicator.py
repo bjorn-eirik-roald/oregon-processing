@@ -36,8 +36,19 @@ class Communicator:
     def __enter__(self):
 
         self._exit_stack = ExitStack()
+        return self
 
-        connection_result = None
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Ensure all managers and connection are properly cleaned up."""
+        if self._exit_stack:
+            return self._exit_stack.__exit__(exc_type, exc_value, traceback)
+
+    @property
+    def is_connected(self):
+        """Check if there is an active connection."""
+        return self._session is not None and self._session.is_connected
+
+    def connect(self):
         try:
             connection_result: ConnectionResult = connect()
 
@@ -62,18 +73,6 @@ class Communicator:
             if self._exit_stack:
                 self._exit_stack.close()
             raise
-
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Ensure all managers and connection are properly cleaned up."""
-        if self._exit_stack:
-            return self._exit_stack.__exit__(exc_type, exc_value, traceback)
-
-    @property
-    def is_connected(self):
-        """Check if there is an active connection."""
-        return self._session is not None and self._session.is_connected
 
     def start_interactive_terminal(self):
         terminal = InteractiveTerminal(self._session)
