@@ -9,9 +9,14 @@ def create_project():
     try:
         with LoggingManager(write_to_report_file=False, write_to_console=True):
             Project.create_new_project()
-            LOGGER.info("Project created successfully.")
     except (FileExistsError, NoFileSelectedError, InvalidProjectDirectoryError, UserCancelledError) as e:
-        print(f"\n\nProject creation failed due to an error. Please see the error message below for more details:\n\n{str(e)}")
+        print(f"\n\nProject creation failed due to an error. Please see the log for more details:\n\n{str(e)}")
+        return
+    except Exception as e:
+        print(f"\n\nAn unexpected error occurred during project creation:\n\n{str(e)}")
+        return
+
+    print("\n\nProject created successfully.\n\n")
 
 if __name__ == "__main__":
     create_project()

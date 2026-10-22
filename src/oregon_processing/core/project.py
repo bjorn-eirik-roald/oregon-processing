@@ -11,6 +11,7 @@ from oregon_processing.util.config import OregonConfig
 from oregon_processing.core.popups.file_selector import browse_directory
 from oregon_processing.core.popups.name_popup import prompt_name
 from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
+from oregon_processing.core.popups.warning_popup import show_warning_popup
 from oregon_processing.util.directory_names import directory_names
 from oregon_processing.util.file_names import file_names
 
@@ -86,56 +87,39 @@ class Project:
 
         try:
             answer = prompt_yes_no(message="Do you want to create a new Oregon project?")
+            if answer != "Yes":
+                raise UserCancelledError
         except UserCancelledError:
             raise UserCancelledError("Project creation cancelled by user during initial confirmation prompt.")
 
-        if answer != "Yes":
-            raise UserCancelledError("Project creation cancelled by user during initial confirmation prompt.")
 
         # prompt user to select dir to save project file
-        try:
-            project_parent_dir = browse_directory(title="Select directory to save new Oregon project")
-        except NoFileSelectedError:
-            raise UserCancelledError("Project creation cancelled by user during directory selection.")
+        while True:
+            try:
+                project_parent_dir = browse_directory(title="Select directory to save new Oregon project")
+            except NoFileSelectedError:
+                raise UserCancelledError("Project creation cancelled by user during directory selection.")
 
+            project_parameters = cls.prompt_project_parameters()
+            message = "Creating new Oregon project with the following parameters:"
+            for key, value in project_parameters.items():
+                message += f"\n\t- {key}: {value}"
+            LOGGER.info(message)
 
+            # Create new directory for project files
+            project_name_safe = "".join(c for c in project_parameters["project_name"] if c.isalnum() or c in (' ', '_', '-')).rstrip()
+            project_dir = project_parent_dir / project_name_safe
 
-        project_parameters = cls.prompt_project_parameters()
-        message = "Creating new Oregon project with the following parameters:"
-        for key, value in project_parameters.items():
-            message += f"\n\t- {key}: {value}"
-        LOGGER.info(message)
+            # if project JSON file already exists in selected directory, exit with an error to avoid overwriting existing project
+            if project_dir.exists():
+                warning_message = f"A directory for the project already exists at:\n{project_dir}\n\nPlease select a different directory."
+                show_warning_popup(warning_message, title="Project Directory Already Exists")
+                LOGGER.warning(warning_message)
+                continue
 
-        # Create new directory for project files
-        project_name_safe = "".join(c for c in project_parameters["project_name"] if c.isalnum() or c in (' ', '_', '-')).rstrip()
-        project_dir = project_parent_dir / project_name_safe
+            break
 
-        # if project JSON file already exists in selected directory, exit with an error to avoid overwriting existing project
-        if project_dir.exists():
-            error_message = f"A directory for the project already exists in the selected location: {project_dir}. Please select a different directory or remove the existing directory to avoid overwriting an existing project."
-            LOGGER.error(error_message)
-            raise FileExistsError(error_message)
-
-        project_dir.mkdir(parents=True, exist_ok=True)
-        LOGGER.info(f"Created project directory at: {project_dir}")
-
-        project_json_file = project_dir / file_names.oregon_project_json_file_name
-        project_json_file.touch(exist_ok=True)
-
-        with open(project_json_file, 'w') as f:
-            json.dump(project_parameters, f, indent=4)
-        LOGGER.info(f"Created project JSON file at: {project_json_file}")
-
-        # create directories in project dir
-        archive_dir = project_dir / directory_names.archive_dir_name
-        logs_dir = project_dir / directory_names.logs_dir_name
-        export_dir = project_dir / directory_names.export_dir_name
-        detection_record_export_dir = export_dir / directory_names.detection_record_export_dir_name
-
-        create_dirs = [archive_dir, logs_dir, export_dir, detection_record_export_dir]
-        for dir in create_dirs:
-            dir.mkdir(exist_ok=True)
-            LOGGER.info(f"Created directory at: {dir}")
+        cls._create_project_structure(project_dir, project_parameters)
 
         LOGGER.info("Project creation complete.")
 
@@ -153,29 +137,26 @@ class Project:
         }
 
     @classmethod
-    def update_project_parameters(cls, project_dir: Path = None):
-
-        if project_dir is None:
-            try:
-                project_dir = browse_directory(title="Select Oregon project directory to update")
-            except NoFileSelectedError:
-                raise UserCancelledError("Project update cancelled by user during directory selection.")
-
-        try:
-            project = cls(project_dir=project_dir)  # Attempt to load project to validate directory and load existing parameters
-        except InvalidProjectDirectoryError as e:
-            raise InvalidProjectDirectoryError(f"Project update cancelled due to current project directory being invalid: {e}")
-
-        project_parameters = {
-            "project_name": project.project_name,
-            "software_version": project.software_version
-        }
-
-        project_parameters["project_name"] = prompt_name(title="Enter a name for this Oregon project", message="Project name:", default=project_parameters.get("project_name"), allow_numbers=True)
+    def _create_project_structure(cls, project_dir: Path, project_parameters: dict) -> None:
+        project_dir.mkdir(parents=True, exist_ok=True)
+        LOGGER.info(f"Created project directory at: {project_dir}")
 
         project_json_file = project_dir / file_names.oregon_project_json_file_name
+        project_json_file.touch(exist_ok=True)
+
         with open(project_json_file, 'w') as f:
             json.dump(project_parameters, f, indent=4)
+        LOGGER.info(f"Created project JSON file at: {project_json_file}")
+
+        archive_dir = project_dir / directory_names.archive_dir_name
+        logs_dir = project_dir / directory_names.logs_dir_name
+        export_dir = project_dir / directory_names.export_dir_name
+        detection_record_export_dir = export_dir / directory_names.detection_record_export_dir_name
+
+        create_dirs = [archive_dir, logs_dir, export_dir, detection_record_export_dir]
+        for dir in create_dirs:
+            dir.mkdir(exist_ok=True)
+            LOGGER.info(f"Created directory at: {dir}")
 
     def _validate_project_directory(self) -> bool:
         """
