@@ -6,7 +6,7 @@ cd /d "%~dp0.."
 set VENV_DIR=.venv
 set VENV_PYTHON=%VENV_DIR%\Scripts\python.exe
 set SCRIPT_PATH=src\oregon_processing\execute.py
-set ARG1=get_database_status
+set ARG1=check_database_status
 
 echo Using virtual environment: %VENV_DIR%
 
