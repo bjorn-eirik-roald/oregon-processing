@@ -1,21 +1,26 @@
-"""
-Execute the export protocol to retrieve data from a Oregon RFID and store in database define by project
-"""
-
-from oregon_processing.core.export_protocol import ExportProtocol
-from oregon_processing.exceptions import (ConfigNotFoundError, InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
-                                    CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError)
+from oregon_processing.core.export_protocol import run_export_protocol as execute_export_protocol
+from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
+                                    CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError,
+                                    FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError)
 
 
 def run_export_protocol():
 
     try:
-        with ExportProtocol() as export_protocol:
-            export_protocol.run_export_protocol()
-    except (ConfigNotFoundError, InvalidConfigError) as e:
-        print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file is present and valid, then try again.")
-    except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError) as e:
-        print(f"\n\nAn error occurred during the export protocol\nPlease check the log file for details and try again.\n\n")
+        execute_export_protocol()
+    except InvalidConfigError as e:
+        print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file is valid, then try again.")
+        return
+    except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
+            ClockSyncError, ModeChangeError, FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError,
+            ExportFailedError) as e:
+        print(f"\n\nAn error occurred during the export protocol\nPlease check the log file for details.\n\n")
+        return
+    except Exception as e:
+        print(f"\n\nAn unexpected error occurred: {str(e)}\n\n")
+        return
+    print(f"\n\nExport protocol completed successfully.\n\n")
+
 
 if __name__ == "__main__":
     run_export_protocol()

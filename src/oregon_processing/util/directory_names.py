@@ -9,7 +9,6 @@ class DirectoryNames:
     crash_log_dir_name: str = "undefined_serial_number_crashes"
     export_dir_name: str = "02_export_data"
     detection_record_export_dir_name: str = "01_detection_records"
-    event_record_export_dir_name: str = "02_event_records"
 
 
 directory_names = DirectoryNames()

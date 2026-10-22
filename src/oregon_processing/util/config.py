@@ -6,7 +6,7 @@ from pathlib import Path
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
-from oregon_processing.exceptions import ConfigNotFoundError, InvalidConfigError
+from oregon_processing.exceptions import InvalidConfigError
 
 class OregonConfig:
     """
@@ -65,10 +65,13 @@ class OregonConfig:
 
     def _load_and_validate(self) -> None:
         if not self._config_file_path.exists():
-            raise ConfigNotFoundError(
-                f"No config file found at '{self._config_file_path}'.\n"
-                f"Run {self.__class__.__name__}.create_default_config() to create a config file before continuing."
+            LOGGER.warning(
+                f"No config file found at '{self._config_file_path}'. Creating a default config."
             )
+            self._config_file_path.parent.mkdir(parents=True, exist_ok=True)
+            default_data = {"last_project_dir": None}
+            with self._config_file_path.open('w', encoding='utf-8') as file_handle:
+                json.dump(default_data, file_handle, indent=4, ensure_ascii=False)
 
         with self._config_file_path.open("r", encoding="utf-8") as file_handle:
             payload = json.load(file_handle)

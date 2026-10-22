@@ -1,6 +1,3 @@
-class ConfigNotFoundError(Exception):
-    """Raised when configuration file is missing or cannot be loaded."""
-    pass
 
 class InvalidConfigError(Exception):
     """Raised when configuration file is invalid or cannot be parsed."""

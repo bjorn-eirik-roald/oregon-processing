@@ -3,7 +3,7 @@ _COMMAND_MODULES = {
     "create_project": "oregon_processing.commands.create_project",
     "open_terminal": "oregon_processing.commands.open_terminal",
     "run_export_protocol": "oregon_processing.commands.run_export_protocol",
-    "get_database_status": "oregon_processing.commands.get_database_status",
+    "check_database_status": "oregon_processing.commands.check_database_status",
 }
 
 _COMMAND_CACHE = {}
