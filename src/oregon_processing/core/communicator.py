@@ -8,7 +8,7 @@ from oregon_processing.core.device_clock import ClockCheckResult, control_device
 from oregon_processing.core.device_mode import DeviceMode, get_current_mode
 from oregon_processing.core.interactive_terminal import InteractiveTerminal
 from oregon_processing.core.device_health import DeviceHealth, check_device_health as get_device_health_report
-from oregon_processing.core.device_status import DeviceStatusChecker, DeviceStatus
+from oregon_processing.core.device_status import DeviceStatus, get_device_status
 from oregon_processing.core.data_export import export_detection_records
 from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.logging_manager import get_logger
@@ -22,7 +22,6 @@ class Communicator:
 
         self._exit_stack = None
         self._session: ConnectionSession = None
-        self._device_status_checker: DeviceStatusChecker = None
 
     def __enter__(self):
 
@@ -46,7 +45,6 @@ class Communicator:
             if connection_result.success:
 
                 self._session: ConnectionSession = self._exit_stack.enter_context(connection_result.session)
-                self._device_status_checker = DeviceStatusChecker(self._session)
                 self._post_connect_handshake()
 
             else:
@@ -72,13 +70,13 @@ class Communicator:
         LOGGER.info("Interactive terminal session ended.")
 
     def get_device_status(self) -> DeviceStatus:
-        return self._device_status_checker.get_device_status()
+        return get_device_status(self._session)
 
     def get_device_mode(self) -> DeviceMode:
-        return get_current_mode(self._session, self._device_status_checker)
+        return get_current_mode(self._session)
 
     def check_device_health(self) -> DeviceHealth:
-        device_health: DeviceHealth = get_device_health_report(self._session, self._device_status_checker)
+        device_health: DeviceHealth = get_device_health_report(self._session)
         return device_health
 
     def control_device_datetime(self, tolerance_seconds: int = 15, attempt_sync: bool = True) -> ClockCheckResult:
@@ -90,9 +88,9 @@ class Communicator:
         return clock_check_result
 
     def export_detection_records(self, dates: list[str], output_dir: Path) -> None:
-        export_detection_records(dates, output_dir, self._session, self._device_status_checker)
+        export_detection_records(dates, output_dir, self._session)
 
     def _post_connect_handshake(self):
         LOGGER.debug("Starting post-connection handshake.")
-        device_status: DeviceStatus = self._device_status_checker.get_device_status()
+        device_status: DeviceStatus = get_device_status(self._session)
         LOGGER.info(f"Connected to device '{device_status.reader_name}' of type '{device_status.device_type}' with serial number '{device_status.serial_number}'.")

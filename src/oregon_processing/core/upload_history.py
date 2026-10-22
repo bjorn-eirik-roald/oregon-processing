@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from oregon_processing.core.communication import ConnectionSession, DeviceCommand
 from oregon_processing.exceptions import UnexpectedResponseError
 from oregon_processing.util.logging_manager import get_logger
-from oregon_processing.core.device_status import DeviceStatusChecker
 LOGGER = get_logger(__name__)
 
 from oregon_processing.core.device_mode import DeviceMode, change_mode, get_current_mode
@@ -30,7 +29,7 @@ class UploadHistory:
     total_records: int = 0
     raw_output: str = ""
 
-def get_upload_history(session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> UploadHistory:
+def get_upload_history(session: ConnectionSession) -> UploadHistory:
     """
     Parse upload history output from UH command.
 
@@ -38,15 +37,15 @@ def get_upload_history(session: ConnectionSession, device_status_checker: Device
     -------
     UploadHistory
     """
-    old_mode = get_current_mode(device_status_checker)
+    old_mode = get_current_mode(session)
     if old_mode.lower() != DeviceMode.STANDBY.value.lower():
-        change_mode(session, device_status_checker, DeviceMode.STANDBY)
+        change_mode(session, DeviceMode.STANDBY)
 
     try:
         upload_history_lines = session.send_command(DeviceCommand.UH)
     finally:
         if old_mode.lower() != DeviceMode.STANDBY.value.lower():
-            change_mode(session, device_status_checker, old_mode)
+            change_mode(session, old_mode)
 
     upload_history: UploadHistory = UploadHistory()
     upload_history.raw_output = "\n".join(upload_history_lines)

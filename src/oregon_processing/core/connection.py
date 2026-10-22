@@ -2,6 +2,7 @@ from serial import Serial
 from serial.tools import list_ports
 
 from oregon_processing.core.communication import ConnectionSession
+from oregon_processing.core.device_status import clear_approved_unrecognized_status_lines
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
@@ -28,6 +29,9 @@ class ConnectionResult:
 
 def connect() -> ConnectionResult:
     LOGGER.info("Initializing connection attempt")
+
+    # new connection --> clear previously approved unrecognized status lines
+    clear_approved_unrecognized_status_lines()
 
     first_attempt = True
     while True:

@@ -4,7 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from oregon_processing.core.device_mode import DeviceMode, change_mode, get_current_mode
-from oregon_processing.core.device_status import DeviceStatus, DeviceStatusChecker
+from oregon_processing.core.device_status import DeviceStatus, get_device_status
 from oregon_processing.core.device_format import FormatInfo, get_format_info, set_detection_record_format
 from oregon_processing.core.upload_history import UploadHistory, get_upload_history
 from oregon_processing.core.communication import DeviceCommand, ConnectionSession
@@ -19,19 +19,19 @@ DEFAULT_DETECTION_RECORD_FORMAT = {'ORSR':'DTY ARR SPC TRF DUR SPC TTY SPC TAG S
 
 SEPARATOR = ','
 
-def export_detection_records(dates: list[datetime], output_dir: Path,  session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> bool:
+def export_detection_records(dates: list[datetime], output_dir: Path,  session: ConnectionSession) -> bool:
 
-    old_mode = _enter_export_mode(session, device_status_checker)
-    device_status = device_status_checker.get_device_status()
+    old_mode = _enter_export_mode(session)
+    device_status = get_device_status(session)
 
-    upload_history: UploadHistory = get_upload_history(session, device_status_checker)
+    upload_history: UploadHistory = get_upload_history(session)
     total_number_of_records = upload_history.total_records
     _log_export_start(total_number_of_records, output_dir, len(dates))
 
-    _configure_detection_record_format(session, device_status_checker, device_status)
+    _configure_detection_record_format(session, device_status)
     response = _request_all_records(session, total_number_of_records)
 
-    format_info = get_format_info(session, device_status_checker)
+    format_info = get_format_info(session)
     arr_idx, tag_idx = _get_required_format_indices(format_info)
 
     target_dates = set(d.strftime("%Y-%m-%d") for d in dates)
@@ -56,13 +56,13 @@ def export_detection_records(dates: list[datetime], output_dir: Path,  session: 
     )
 
     _log_export_completion(num_failed_exports, summary_message)
-    _restore_mode(session, device_status_checker, old_mode)
+    _restore_mode(session, old_mode)
     return num_failed_exports == 0
 
 
-def _enter_export_mode(session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> str:
-    old_mode = get_current_mode(session, device_status_checker)
-    change_mode(session, device_status_checker, DeviceMode.STANDBY)
+def _enter_export_mode(session: ConnectionSession) -> str:
+    old_mode = get_current_mode(session)
+    change_mode(session, DeviceMode.STANDBY)
     LOGGER.info(f"Changed device mode to Standby for export. Will return to {old_mode} mode after export is complete.")
     return old_mode
 
@@ -75,12 +75,11 @@ def _log_export_start(total_number_of_records: int, output_dir: Path, num_dates:
 
 def _configure_detection_record_format(
     session: ConnectionSession,
-    device_status_checker: DeviceStatusChecker,
     device_status: DeviceStatus
 ) -> None:
     LOGGER.debug("Setting detection record format for export.")
     default_format = DEFAULT_DETECTION_RECORD_FORMAT[device_status.device_type]
-    set_detection_record_format(session, device_status_checker, default_format)
+    set_detection_record_format(session, default_format)
 
 
 def _request_all_records(session: ConnectionSession, total_number_of_records: int) -> list[str]:
@@ -246,8 +245,8 @@ def _log_export_completion(num_failed_exports: int, summary_message: str) -> Non
     LOGGER.info(summary_message)
 
 
-def _restore_mode(session: ConnectionSession, device_status_checker: DeviceStatusChecker, old_mode: str) -> None:
-    change_mode(session, device_status_checker, old_mode)
+def _restore_mode(session: ConnectionSession, old_mode: str) -> None:
+    change_mode(session, old_mode)
     LOGGER.info(f"Returned device mode to {old_mode} after export.")
 
 def _split_detection_record(record_line: str, format_info: FormatInfo) -> list[str]:

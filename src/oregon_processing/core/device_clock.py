@@ -1,17 +1,10 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
+from oregon_processing.core.communication import DeviceCommand, ConnectionSession
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
-
-from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
-from oregon_processing.core.communication import DeviceCommand
-
-if TYPE_CHECKING:
-    from oregon_processing.core.communication import ConnectionSession
 
 
 TIME_STATUSES = {

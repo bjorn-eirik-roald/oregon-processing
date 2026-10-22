@@ -1,16 +1,10 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
 from enum import Enum
 
 from oregon_processing.exceptions import ModeChangeError
+from oregon_processing.core.communication import DeviceCommand, ConnectionSession
+
 from oregon_processing.util.logging_manager import get_logger
-from oregon_processing.core.communication import DeviceCommand
-
 LOGGER = get_logger(__name__)
-
-if TYPE_CHECKING:
-    from oregon_processing.core.communication import ConnectionSession
-    from oregon_processing.core.device_status import DeviceStatusChecker
 
 
 class DeviceMode(str, Enum):
@@ -49,20 +43,20 @@ def is_valid_mode(mode_name: str) -> bool:
     return True
 
 
-def get_current_mode(status_checker: DeviceStatusChecker) -> str:
+def get_current_mode(session: ConnectionSession) -> str:
     """Get current operating mode from SY status parsing."""
-    status = status_checker.get_device_status()
+    from oregon_processing.core.device_status import get_device_status
+    status = get_device_status(session)
     return status.mode
 
 
 def change_mode(
     session: ConnectionSession,
-    status_checker: DeviceStatusChecker,
     mode_name: str | DeviceMode,
 ) -> bool:
     """Change device operating mode and verify transition."""
     target_mode = DeviceMode.from_value(mode_name)
-    current_mode = DeviceMode.from_value(get_current_mode(status_checker))
+    current_mode = DeviceMode.from_value(get_current_mode(session))
 
     LOGGER.debug(f"Initiating mode change from '{current_mode}' to '{target_mode}'.")
     if current_mode == target_mode:
@@ -72,7 +66,7 @@ def change_mode(
     LOGGER.debug(f"Sending command '{target_mode.command}' to change device mode.")
     session.send_command(target_mode.command)
 
-    actual_mode = DeviceMode.from_value(get_current_mode(status_checker))
+    actual_mode = DeviceMode.from_value(get_current_mode(session))
     if actual_mode == target_mode:
         LOGGER.debug(f"Device mode changed from '{current_mode}' to '{target_mode}'.")
         return True
@@ -80,4 +74,3 @@ def change_mode(
     error_message = f"Device mode change failed! Expected mode: '{target_mode}', Actual mode: '{actual_mode}'"
     LOGGER.error(error_message)
     raise ModeChangeError(error_message)
-

@@ -1,17 +1,14 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
-
 from dataclasses import dataclass
+
+from oregon_processing.core.device_status import FirmwareVersion, DeviceStatus, get_device_status
+from oregon_processing.core.communication import ConnectionSession
+
 from oregon_processing.util.logging_manager import get_logger
-
-
 LOGGER = get_logger(__name__)
 
-if TYPE_CHECKING:
-    from oregon_processing.core.communication import ConnectionSession
-    from oregon_processing.core.device_status import FirmwareVersion, DeviceStatus, DeviceStatusChecker
-
+RECOMMENDED_VOLTAGE = 14.0
+CRITICAL_VOLTAGE_THRESHOLD = 12.5
+OLD_VERSION_THRESHOLD = 2.74
 
 @dataclass
 class DeviceHealth:
@@ -21,12 +18,7 @@ class DeviceHealth:
     critical_warnings: list[str]
     warnings: list[str]
 
-RECOMMENDED_VOLTAGE = 14.0
-CRITICAL_VOLTAGE_THRESHOLD = 12.5
-OLD_VERSION_THRESHOLD = 2.74
-
-
-def check_device_health(session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> DeviceHealth:
+def check_device_health(session: ConnectionSession) -> DeviceHealth:
     """
     Calls for device status and checks parsed device status for potential issues.
 
@@ -42,7 +34,7 @@ def check_device_health(session: ConnectionSession, device_status_checker: Devic
     critical_warnings = []
     non_critical_warnings = []
 
-    device_status: DeviceStatus = device_status_checker.get_device_status()
+    device_status: DeviceStatus = get_device_status(session)
     prompt_prefix = session.prompt_prefix
 
     # Check time synchronization status based on prompt signature (3rd character should be 'G' for GNSS sync)

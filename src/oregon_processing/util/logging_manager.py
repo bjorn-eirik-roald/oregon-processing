@@ -1,11 +1,9 @@
-from __future__ import annotations
 import inspect
 from dataclasses import dataclass
 from datetime import datetime
 import logging
 from pathlib import Path
 import re
-import sys
 from typing import Any
 
 

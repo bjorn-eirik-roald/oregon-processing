@@ -1,12 +1,10 @@
-
 import json
 import os
 from pathlib import Path
 
+from oregon_processing.exceptions import InvalidConfigError
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
-
-from oregon_processing.exceptions import InvalidConfigError
 
 class OregonConfig:
     """
