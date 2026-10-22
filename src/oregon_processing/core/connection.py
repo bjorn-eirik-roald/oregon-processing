@@ -3,7 +3,6 @@ from serial.tools import list_ports
 
 from oregon_processing.core.communication import ConnectionSession
 from oregon_processing.util.logging_manager import get_logger
-from oregon_processing.core.device_status import DeviceStatusChecker
 
 LOGGER = get_logger(__name__)
 BAUD_RATE = 115200
@@ -13,9 +12,6 @@ class NotApplicableObject:
 
     def __repr__(self):
         return "<NotApplicableObject>"
-
-    def __bool__(self):
-        return False
 
 NOT_APPLICABLE = NotApplicableObject()
 

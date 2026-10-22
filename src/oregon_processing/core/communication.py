@@ -4,8 +4,6 @@ from typing import Optional, Tuple
 from serial import Serial
 
 
-
-
 class DeviceCommand(str, Enum):
     # Reader power / operation
     ON = "ON"
@@ -116,6 +114,7 @@ class DeviceCommand(str, Enum):
     def __str__(self) -> str:
         return self.value
 
+
 SPACE_ARGUMENT_COMMANDS = frozenset(
     {
         DeviceCommand.DT,
@@ -123,6 +122,7 @@ SPACE_ARGUMENT_COMMANDS = frozenset(
         DeviceCommand.FM,
     }
 )
+
 
 PROMPT_PREFIX_SETS = (
     {"0", "H", "N"},  # operating mode
@@ -205,7 +205,9 @@ class ConnectionSession:
         if self._connection and self._connection.is_open:
             self._connection.close()
 
-
+# =============================================================================================================================================
+# Public functions
+# =============================================================================================================================================
 def is_valid_command(command_text: str) -> bool:
     """Validate a full command string."""
 

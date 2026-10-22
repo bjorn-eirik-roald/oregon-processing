@@ -1,32 +1,26 @@
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
 import time
 from datetime import date, datetime
 from collections import defaultdict
 from pathlib import Path
 
-from oregon_processing.util.logging_manager import get_logger
-LOGGER = get_logger(__name__)
-
 from oregon_processing.core.device_mode import DeviceMode, change_mode, get_current_mode
 from oregon_processing.core.device_status import DeviceStatus, DeviceStatusChecker
-from oregon_processing.core.upload_history import UploadHistory, get_upload_history
-from oregon_processing.core.communication import DeviceCommand
 from oregon_processing.core.device_format import FormatInfo, get_format_info, set_detection_record_format
+from oregon_processing.core.upload_history import UploadHistory, get_upload_history
+from oregon_processing.core.communication import DeviceCommand, ConnectionSession
 from oregon_processing.exceptions import ExportFailedError
 
-if TYPE_CHECKING:
-    from oregon_processing.core.communication import ConnectionSession
 
+from oregon_processing.util.logging_manager import get_logger
+LOGGER = get_logger(__name__)
 
 DEFAULT_DETECTION_RECORD_FORMAT = {'ORSR':'DTY ARR SPC TRF DUR SPC TTY SPC TAG SCD NCD EFA LON LAT',
                                     'ORMR':'DTY ARR SPC TRF DUR SPC TTY SPC ANT TAG SCD NCD EFA LON LAT'}
 
+SEPARATOR = ','
 
 def export_detection_records(dates: list[datetime], output_dir: Path,  session: ConnectionSession, device_status_checker: DeviceStatusChecker) -> bool:
 
-    sep = ','
     old_mode = _enter_export_mode(session, device_status_checker)
     device_status = device_status_checker.get_device_status()
 
@@ -46,7 +40,7 @@ def export_detection_records(dates: list[datetime], output_dir: Path,  session: 
         filtered_detection_records,
         arr_idx,
         tag_idx,
-        sep
+        SEPARATOR
     )
 
     all_dates = sorted(dates)
@@ -58,8 +52,7 @@ def export_detection_records(dates: list[datetime], output_dir: Path,  session: 
         all_dates=all_dates,
         detection_records_by_date=detection_records_by_date,
         unique_tags_by_date=unique_tags_by_date,
-        format_info=format_info,
-        sep=sep
+        format_info=format_info
     )
 
     _log_export_completion(num_failed_exports, summary_message)
@@ -149,7 +142,6 @@ def _organize_detection_records(
     filtered_detection_records: list[list[str]],
     arr_idx: int,
     tag_idx: int,
-    sep: str
 ) -> tuple[dict[date, list[str]], dict[date, set[str]], set[str]]:
     LOGGER.debug("Organizing detection records by date.")
     detection_records_by_date: defaultdict[date, list[str]] = defaultdict(list)
@@ -159,7 +151,7 @@ def _organize_detection_records(
     for detection_record in filtered_detection_records:
         record_date = datetime.strptime(detection_record[arr_idx].split()[0], "%Y-%m-%d").date()
         record_tag = detection_record[tag_idx]
-        output_line = sep.join(detection_record)
+        output_line = SEPARATOR.join(detection_record)
 
         detection_records_by_date[record_date].append(output_line)
         unique_tags_by_date[record_date].add(record_tag)
@@ -195,8 +187,7 @@ def _write_detection_record_exports(
     all_dates: list[datetime],
     detection_records_by_date: dict[date, list[str]],
     unique_tags_by_date: dict[date, set[str]],
-    format_info: FormatInfo,
-    sep: str
+    format_info: FormatInfo
 ) -> int:
     num_dates = len(all_dates)
     max_counter_width = len(f"({num_dates}/{num_dates})")
@@ -204,7 +195,7 @@ def _write_detection_record_exports(
     max_count_width = len(str(max_record_count))
     max_unique_tags = max((len(tags) for tags in unique_tags_by_date.values()), default=0)
     max_unique_tags_width = len(str(max_unique_tags))
-    format_columns_str = sep.join(format_info.columns)
+    format_columns_str = SEPARATOR.join(format_info.columns)
 
     num_failed_exports = 0
     LOGGER.info("Exporting detection records to files.")
@@ -237,7 +228,7 @@ def _write_detection_record_exports(
                     f.write(f"{col}: {field_name}\n")
                 f.write("=========================\n\n")
                 f.write("#RECORDS START HERE\n")
-                f.write(f"{format_columns_str.replace(' ', sep)}\n")
+                f.write(f"{format_columns_str.replace(' ', SEPARATOR)}\n")
                 if current_date in detection_records_by_date:
                     f.write('\n'.join(detection_records_by_date[current_date]))
         except Exception as e:

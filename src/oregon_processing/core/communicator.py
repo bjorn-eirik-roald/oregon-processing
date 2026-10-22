@@ -21,17 +21,8 @@ class Communicator:
     def __init__(self):
 
         self._exit_stack = None
-
         self._session: ConnectionSession = None
-
         self._device_status_checker: DeviceStatusChecker = None
-
-        self._last_upload_date = None
-        self._reader_name = None
-        self._serial_number = None
-        self._device_type = None
-        self._mode = None
-
 
     def __enter__(self):
 
@@ -48,7 +39,7 @@ class Communicator:
         """Check if there is an active connection."""
         return self._session is not None and self._session.is_connected
 
-    def connect(self):
+    def connect(self) -> None:
         try:
             connection_result: ConnectionResult = connect()
 
@@ -74,7 +65,7 @@ class Communicator:
                 self._exit_stack.close()
             raise
 
-    def start_interactive_terminal(self):
+    def start_interactive_terminal(self) -> None:
         terminal = InteractiveTerminal(self._session)
         terminal.run()
 
@@ -86,11 +77,11 @@ class Communicator:
     def get_device_mode(self) -> DeviceMode:
         return get_current_mode(self._session, self._device_status_checker)
 
-    def check_device_health(self):
-        health_report: DeviceHealth = get_device_health_report(self._session, self._device_status_checker)
-        return health_report
+    def check_device_health(self) -> DeviceHealth:
+        device_health: DeviceHealth = get_device_health_report(self._session, self._device_status_checker)
+        return device_health
 
-    def control_device_datetime(self, tolerance_seconds: int = 15, attempt_sync: bool = True) -> dict:
+    def control_device_datetime(self, tolerance_seconds: int = 15, attempt_sync: bool = True) -> ClockCheckResult:
         clock_check_result: ClockCheckResult = control_device_datetime(
             session=self._session,
             tolerance_time_diff=tolerance_seconds,
@@ -98,9 +89,8 @@ class Communicator:
         )
         return clock_check_result
 
-    def export_detection_records(self, dates: list[str], output_dir: Path) -> bool:
-        success: bool = export_detection_records(dates, output_dir, self._session, self._device_status_checker)
-        return success
+    def export_detection_records(self, dates: list[str], output_dir: Path) -> None:
+        export_detection_records(dates, output_dir, self._session, self._device_status_checker)
 
     def _post_connect_handshake(self):
         LOGGER.debug("Starting post-connection handshake.")
