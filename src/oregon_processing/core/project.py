@@ -8,10 +8,10 @@ LOGGER = get_logger(__name__)
 from oregon_processing.exceptions import UserCancelledError, NoFileSelectedError, InvalidProjectDirectoryError
 from oregon_processing.util.config import OregonConfig
 
-from oregon_processing.core.popups.file_selector import browse_directory
-from oregon_processing.core.popups.name_popup import prompt_name
-from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
-from oregon_processing.core.popups.warning_popup import show_warning_popup
+from oregon_processing.gui.popups.browse import browse_directory
+from oregon_processing.gui.popups.name_popup import name_prompt
+from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt
+from oregon_processing.gui.popups.warning_popup import show_warning_popup
 from oregon_processing.util.directory_names import directory_names
 from oregon_processing.util.file_names import file_names
 
@@ -86,8 +86,8 @@ class Project:
 
 
         try:
-            answer = prompt_yes_no(message="Do you want to create a new Oregon project?")
-            if answer != "Yes":
+            answer = confirm_prompt(message="Do you want to create a new Oregon project?")
+            if not answer:
                 raise UserCancelledError
         except UserCancelledError:
             raise UserCancelledError("Project creation cancelled by user during initial confirmation prompt.")
@@ -126,7 +126,7 @@ class Project:
     @classmethod
     def prompt_project_parameters(cls):
 
-        project_name = prompt_name(title="Enter a name for this Oregon project", message="Project name:", allow_numbers=True)
+        project_name = name_prompt(message="Project name:", title="Enter a name for this Oregon project", allow_numbers=True)
 
         # get version from current Oregon installation
         software_version = oregon_processing.__version__
@@ -245,8 +245,8 @@ def open_previous_project() -> Project:
     last_project_dir = config.last_project_dir
     if last_project_dir:
         try:
-            answer = prompt_yes_no(
-                f"Last project directory found: {last_project_dir}\n\nDo you want to reuse this directory for the export?",
+            answer = confirm_prompt(
+                message=f"Last project directory found: {last_project_dir}\n\nDo you want to reuse this directory for the export?",
                 window_height=250,
                 window_width=600
             )
@@ -256,7 +256,7 @@ def open_previous_project() -> Project:
             print(f"\n\n{message}\n\n")
             raise UserCancelledError(message)
 
-        if answer != "Yes":
+        if not answer:
             last_project_dir = None
 
     project = Project(project_dir=last_project_dir)

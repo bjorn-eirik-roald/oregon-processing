@@ -501,10 +501,10 @@ class DeviceStatusChecker:
         Returns True if the user approves the unrecognized line, False if the user does not approve and wants to treat it as an error.
         """
 
-        from oregon_processing.core.popups.yes_no_popup import prompt_yes_no
+        from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt
 
         try:
-            answer = prompt_yes_no(f"Unrecognized line in device status response: '{line}'\n\nDo you want to ignore this line and continue with processing?",
+            answer = confirm_prompt(message=f"Unrecognized line in device status response: '{line}'\n\nDo you want to ignore this line and continue with processing?",
                                    window_height=200, window_width=800)
         except (UserCancelledError, NoFileSelectedError):
             print("\n\nUnrecognized line approval cancelled by user. Aborting export protocol.\n\n")
