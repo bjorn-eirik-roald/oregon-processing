@@ -6,6 +6,7 @@ from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
 from oregon_processing.exceptions import UserCancelledError, NoFileSelectedError, InvalidProjectDirectoryError
+from oregon_processing.util.config import OregonConfig
 
 from oregon_processing.core.popups.file_selector import browse_directory
 from oregon_processing.core.popups.name_popup import prompt_name
@@ -38,7 +39,6 @@ class Project:
         self._crash_logs_dir: Path = self._logs_dir / directory_names.crash_log_dir_name
         self._export_dir: Path = project_dir / directory_names.export_dir_name
         self._detection_record_export_dir: Path = self._export_dir / directory_names.detection_record_export_dir_name
-        self._event_record_export_dir: Path = self._export_dir / directory_names.event_record_export_dir_name
 
         self._project_json_file: Path = project_dir / file_names.oregon_project_json_file_name
 
@@ -79,10 +79,6 @@ class Project:
     @property
     def detection_record_export_dir(self) -> Path:
         return self._detection_record_export_dir
-
-    @property
-    def event_record_export_dir(self) -> Path:
-        return self._event_record_export_dir
 
     @classmethod
     def create_new_project(cls):
@@ -135,9 +131,8 @@ class Project:
         logs_dir = project_dir / directory_names.logs_dir_name
         export_dir = project_dir / directory_names.export_dir_name
         detection_record_export_dir = export_dir / directory_names.detection_record_export_dir_name
-        event_record_export_dir = export_dir / directory_names.event_record_export_dir_name
 
-        create_dirs = [archive_dir, logs_dir, export_dir, detection_record_export_dir, event_record_export_dir]
+        create_dirs = [archive_dir, logs_dir, export_dir, detection_record_export_dir]
         for dir in create_dirs:
             dir.mkdir(exist_ok=True)
             LOGGER.info(f"Created directory at: {dir}")
@@ -193,7 +188,6 @@ class Project:
             self._logs_dir,
             self._export_dir,
             self._detection_record_export_dir,
-            self._event_record_export_dir
         ]
 
         if not expected_json_file.is_file():
@@ -257,3 +251,34 @@ def set_project(project: Project):
     global CACHED_PROJECT
     CACHED_PROJECT = project
     LOGGER.debug(f"Project set: {project._project_name}")
+
+
+def open_previous_project() -> Project:
+    """
+    Initialize, cache, and persist the active project using OregonConfig.
+
+    If a last-used project path exists, prompts whether to reuse it.
+    """
+    config = OregonConfig()
+
+    last_project_dir = config.last_project_dir
+    if last_project_dir:
+        try:
+            answer = prompt_yes_no(
+                f"Last project directory found: {last_project_dir}\n\nDo you want to reuse this directory for the export?",
+                window_height=250,
+                window_width=600
+            )
+        except (UserCancelledError, NoFileSelectedError):
+            message = "Project directory selection cancelled by user. Aborting export protocol."
+            LOGGER.info(message)
+            print(f"\n\n{message}\n\n")
+            raise UserCancelledError(message)
+
+        if answer != "Yes":
+            last_project_dir = None
+
+    project = Project(project_dir=last_project_dir)
+    set_project(project)
+    config.last_project_dir = project.project_dir
+    return project
