@@ -1,5 +1,5 @@
 from enum import Enum
-
+from typing import Union
 from oregon_processing.exceptions import ModeChangeError
 from oregon_processing.core.communication import DeviceCommand, ConnectionSession
 
@@ -21,7 +21,7 @@ class DeviceMode(str, Enum):
         return obj
 
     @classmethod
-    def from_value(cls, mode: str | "DeviceMode") -> "DeviceMode":
+    def from_value(cls, mode: Union[str, "DeviceMode"]) -> "DeviceMode":
         if isinstance(mode, cls):
             return mode
         if not isinstance(mode, str):

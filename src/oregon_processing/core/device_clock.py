@@ -23,10 +23,10 @@ TIME_STATUSES = {
 class ClockStatus:
     """Clock status payload parsed from DT/TZ responses."""
 
-    datetime: datetime | None = None
+    device_datetime: datetime | None = None
     elapsed_time: timedelta | None = None
     sync_status: str | None = None
-    timezone: timezone | None = None
+    device_timezone: timezone | None = None
 
 
 @dataclass
@@ -130,17 +130,17 @@ def _check_if_synched(
         time_diff = None
         is_synchronized = False
     else:
-        device_datetime_utc = device_clock_status.datetime.astimezone(timezone.utc)
+        device_datetime_utc = device_clock_status.device_datetime.astimezone(timezone.utc)
         computer_datetime_utc = computer_datetime.astimezone(timezone.utc)
         time_diff = abs(device_datetime_utc - computer_datetime_utc).total_seconds()
         is_synchronized = time_diff <= tolerance_time_diff
 
     return ClockCheckResult(
         synchronized=is_synchronized,
-        device_datetime=device_clock_status.datetime,
+        device_datetime=device_clock_status.device_datetime,
         device_elapsed_time=device_clock_status.elapsed_time,
         device_sync_status=device_clock_status.sync_status,
-        device_timezone=device_clock_status.timezone,
+        device_timezone=device_clock_status.device_timezone,
         computer_datetime=computer_datetime,
         time_difference=time_diff,
     )
@@ -308,7 +308,7 @@ def _parse_absolute_dt_response(dt_line: str, clock_status: ClockStatus) -> None
         microsecond=milliseconds * 1000,
     )
 
-    clock_status.datetime = dt
+    clock_status.device_datetime = dt
     clock_status.sync_status = sync_status
 
 
@@ -381,5 +381,5 @@ def _parse_tz_response(tz_line: str, clock_status: ClockStatus) -> None:
 
     total_seconds = sign * (hours * 3600 + minutes * 60)
     tz = timezone(timedelta(seconds=total_seconds))
-    clock_status.timezone = tz
-    clock_status.datetime = clock_status.datetime.replace(tzinfo=tz) if clock_status.datetime else None
+    clock_status.device_timezone = tz
+    clock_status.device_datetime = clock_status.device_datetime.replace(tzinfo=tz) if clock_status.device_datetime else None

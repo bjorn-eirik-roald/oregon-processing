@@ -10,6 +10,7 @@ def open_terminal():
     try:
         with LoggingManager(write_to_console=True, write_to_report_file=False):
             with Communicator() as communicator:
+                communicator.connect()
                 communicator.start_interactive_terminal()
     except InvalidConfigError as e:
         print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file and valid, then try again.")

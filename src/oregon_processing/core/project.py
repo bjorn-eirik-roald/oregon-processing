@@ -246,9 +246,9 @@ def open_previous_project() -> Project:
     if last_project_dir:
         try:
             answer = confirm_prompt(
-                message=f"Last project directory found: {last_project_dir}\n\nDo you want to reuse this directory for the export?",
-                window_height=250,
-                window_width=600
+                message=f"Last project directory found: {last_project_dir}\n\nDo you want to reuse this project (Confirm) or select a different project (Cancel)?",
+                window_height=200,
+                window_width=450
             )
         except (UserCancelledError, NoFileSelectedError):
             message = "Project directory selection cancelled by user. Aborting export protocol."

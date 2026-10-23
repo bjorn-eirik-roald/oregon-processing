@@ -118,6 +118,10 @@ def print_last_exported_detection_record_dates() -> None:
     # sort from least recent to most recent
     latest_record_dates = dict(sorted(latest_record_dates.items(), key=lambda item: (item[1] is not None, item[1])))
 
+    if not latest_record_dates:
+        print("No detection record files found for any serial number.")
+        return
+
     print("\nMost Recent Detection Record Dates by Serial Number:")
     for serial, record_date in latest_record_dates.items():
         if record_date:
