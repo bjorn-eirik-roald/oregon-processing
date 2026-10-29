@@ -1,3 +1,4 @@
+import re
 import time
 from enum import Enum
 from typing import Optional, Tuple
@@ -307,9 +308,7 @@ def receive_response(
     The command may be passed as a DeviceCommand plus optional argument, or as a
     raw command string. The normalized command text is used to strip echoed input.
     """
-    IGNORED_RESPONSE_PATTERNS = [
 
-    ]
     if isinstance(command, str):
         command_text = command.strip()
         if not command_text:
@@ -393,13 +392,23 @@ def _is_valid_prompt_prefix(signature: str) -> bool:
 
 def _clean_response_lines(lines: list[str], command: str) -> list[str]:
     """Clean response lines by removing echoed command and known extraneous lines."""
-    cleaned = lines
-    cleaned = [line for line in cleaned if line != "Database file open"]
-    cleaned = [line for line in cleaned if "ORMR ready" not in line]
-    cleaned = [line for line in cleaned if line != "Bluetooth is off"]
-    cleaned = [line for line in cleaned if line != "Bluetooth is on"]
-    cleaned = [line for line in cleaned if line != "COMM ready"]
-    cleaned = [line for line in cleaned if line and line != command]
+    ignored_patterns = (
+        re.compile(r"^I\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?"), # I detection lines
+        re.compile(r"Database file open"),
+        re.compile(r"ORMR ready"),
+        re.compile(r"Bluetooth is off"),
+        re.compile(r"Bluetooth is on"),
+        re.compile(r"COMM ready"),
+    )
+
+    cleaned = [line for line in lines if line] # Remove empty lines from the response to simplify further processing
+    cleaned = [line for line in cleaned if line != command] # Remove the echoed command from the response lines
+
+    # Remove lines that match any of the ignored patterns defined above
+    cleaned = [
+        line for line in cleaned
+        if not any(pattern.search(line) for pattern in ignored_patterns)
+    ]
     return cleaned
 
 
