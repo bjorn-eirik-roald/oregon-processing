@@ -174,13 +174,8 @@ class ConnectionSession:
                 "Define and use an explicit DeviceCommand enum value for compact command forms."
             )
 
-        command = str(command)
-
-        if argument:
-            command = f"{command} {argument}"
-
-        transmit_command(self._connection, command)
-        lines, prompt_prefix = receive_response(command, self._connection, timeout)
+        transmit_command(connection=self._connection, command=command, argument=argument)
+        lines, prompt_prefix = receive_response(command=command, connection=self._connection, timeout=timeout, argument=argument)
         self._last_prompt_prefix = prompt_prefix or self._last_prompt_prefix
         return lines
 
@@ -196,8 +191,21 @@ class ConnectionSession:
         if not isinstance(timeout, (int, float)) or timeout <= 0:
             raise ValueError("Timeout must be a positive number.")
 
-        transmit_command(self._connection, command_text)
-        lines, prompt_prefix = receive_response(command_text, self._connection, timeout)
+        parts = command_text.strip().split(None, 1)
+        main_code = parts[0].upper()
+        argument = parts[1].strip() if len(parts) == 2 else None
+        if argument == "":
+            argument = None
+
+        command = DeviceCommand(main_code)
+        if argument and command not in SPACE_ARGUMENT_COMMANDS:
+            raise ValueError(
+                f"Command '{command}' does not support space-separated arguments. "
+                "Use a compact command enum value instead."
+            )
+
+        transmit_command(connection=self._connection, command=command, argument=argument)
+        lines, prompt_prefix = receive_response(command=command, connection=self._connection, timeout=timeout, argument=argument)
         self._last_prompt_prefix = prompt_prefix or self._last_prompt_prefix
         return lines
 
@@ -208,13 +216,38 @@ class ConnectionSession:
 # =============================================================================================================================================
 # Public functions
 # =============================================================================================================================================
+def _serialize_command(command: DeviceCommand, argument: Optional[str] = None) -> str:
+    """Serialize a DeviceCommand and optional argument into the exact wire format."""
+
+    if not isinstance(command, DeviceCommand):
+        raise ValueError("Command must be a valid DeviceCommand instance.")
+
+    if not isinstance(argument, (str, type(None))):
+        raise ValueError("Argument must be a string or None.")
+
+    if argument is not None:
+        argument = argument.strip()
+        if argument == "":
+            argument = None
+
+    if argument and command not in SPACE_ARGUMENT_COMMANDS:
+        raise ValueError(
+            f"Command '{command}' does not support space-separated arguments. "
+            "Define and use an explicit DeviceCommand enum value for compact command forms."
+        )
+
+    if argument:
+        return f"{command.value} {argument}"
+
+    return command.value
+
+
 def is_valid_command(command_text: str) -> bool:
     """Validate a full command string."""
 
     if not command_text or not command_text.strip():
         return False
 
-    # try to parse the command text as a DeviceCommand. If it fails then the command is invalid.
     try:
         parts = command_text.strip().split(None, 1)
         main_code = parts[0].upper()
@@ -232,15 +265,14 @@ def is_valid_command(command_text: str) -> bool:
                 f"Command '{command}' does not support space-separated arguments. "
                 "Use a compact command enum value instead."
             )
-
     except ValueError:
         return False
 
     return True
 
 
-def transmit_command(connection: Serial, command: str):
-    """Transmit command after clearing and draining input buffer."""
+def transmit_command(connection: Serial, command: DeviceCommand, argument: Optional[str] = None):
+    """Transmit a DeviceCommand after parsing and serializing any optional argument."""
 
     if not isinstance(connection, Serial):
         raise ValueError("Connection must be a valid Serial instance.")
@@ -248,32 +280,54 @@ def transmit_command(connection: Serial, command: str):
     if not connection.is_open:
         raise ValueError("Connection must be open.")
 
-    if not command or not command.strip() or not isinstance(command, str):
-        raise ValueError("Command must be a non-empty string.")
+    if not isinstance(command, DeviceCommand):
+        raise ValueError("Command must be a valid DeviceCommand instance.")
+
+    if not isinstance(argument, (str, type(None))):
+        raise ValueError("Argument must be a string or None.")
+
+    command_text = _serialize_command(command, argument)
 
     # drain any remaining data from the connection buffer before transmitting
     _drain_connection_buffer(connection)
 
-    connection.write((command + "\r\n").encode())
+    connection.write((command_text + "\r\n").encode())
     connection.flush()
 
 
 def receive_response(
-    command: str,
+    command: DeviceCommand | str,
     connection: Serial,
     timeout: float = 5,
-    ) -> Tuple[list[str], Optional[str]]:
+    argument: Optional[str] = None,
+) -> Tuple[list[str], Optional[str]]:
     """
     Receive response lines until ready prompt or idle timeout.
 
-    Returns
-    -------
-    tuple[list[str], Optional[str]]
-        Tuple of collected response lines and the last valid prompt signature seen.
+    The command may be passed as a DeviceCommand plus optional argument, or as a
+    raw command string. The normalized command text is used to strip echoed input.
     """
+    IGNORED_RESPONSE_PATTERNS = [
 
-    if command is None or not command.strip():
-        raise ValueError("Command must be a non-empty string.")
+    ]
+    if isinstance(command, str):
+        command_text = command.strip()
+        if not command_text:
+            raise ValueError("Command must be a non-empty string.")
+        parts = command_text.split(None, 1)
+        main_code = parts[0].upper()
+        try:
+            command_enum = DeviceCommand(main_code)
+        except ValueError as exc:
+            raise ValueError(f"Invalid command '{main_code}'.") from exc
+        argument = parts[1].strip() if len(parts) == 2 else None
+        if argument == "":
+            argument = None
+        command_text = _serialize_command(command_enum, argument)
+    elif isinstance(command, DeviceCommand):
+        command_text = _serialize_command(command, argument)
+    else:
+        raise ValueError("Command must be a valid DeviceCommand or command string.")
 
     if not isinstance(connection, Serial):
         raise ValueError("Connection must be a valid Serial instance.")
@@ -308,9 +362,7 @@ def receive_response(
         if time.time() - last_data_time > timeout:
             break
 
-    if command is not None:
-        lines = _clean_response_lines(lines, command)
-
+    lines = _clean_response_lines(lines, command_text)
     return lines, last_prompt_prefix
 
 
@@ -352,21 +404,20 @@ def _clean_response_lines(lines: list[str], command: str) -> list[str]:
 
 
 def _drain_connection_buffer(connection: Serial) -> None:
-    """Drain any remaining data from the connection buffer."""
+    """Discard stale bytes already waiting in the input buffer before sending a new command."""
     if not isinstance(connection, Serial):
         raise ValueError("Connection must be a valid Serial instance.")
 
     if not connection.is_open:
         raise ValueError("Connection must be open.")
 
-    connection.reset_input_buffer()
-    time.sleep(0.05)
-
     previous_timeout = connection.timeout
     try:
-        connection.timeout = 0.1
-        while connection.in_waiting > 0:
-            connection.read(connection.in_waiting)
-            time.sleep(0.01)
+        connection.timeout = 0.05
+        while True:
+            chunk = connection.read(4096)
+            if not chunk:
+                break
+            time.sleep(0.02)
     finally:
         connection.timeout = previous_timeout

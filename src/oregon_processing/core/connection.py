@@ -1,9 +1,11 @@
 from serial import Serial
 from serial.tools import list_ports
 
-from oregon_processing.core.communication import ConnectionSession
+from oregon_processing.core.communication import ConnectionSession, receive_response, transmit_command
 from oregon_processing.core.device_status import clear_approved_unrecognized_status_lines
 from oregon_processing.util.logging_manager import get_logger
+
+from oregon_processing.core.communication import DeviceCommand
 
 LOGGER = get_logger(__name__)
 BAUD_RATE = 115200
@@ -107,16 +109,11 @@ def _attempt_connection(ports: list[str]) -> ConnectionResult:
 
         ser = None
         try:
-            ser = Serial(port, baudrate=BAUD_RATE, timeout=0.2, write_timeout=0.2)
-            ser.reset_input_buffer()
-            ser.reset_output_buffer()
+            ser = Serial(port, baudrate=BAUD_RATE, timeout=0.5, write_timeout=0.5)
 
-            ser.write(b"SY\r\n")
-            ser.flush()
-
-            response = ser.readline().decode(errors="ignore").strip()
-
-            if response:
+            transmit_command(connection=ser, command=DeviceCommand.SY)
+            _, prompt_prefix = receive_response(connection=ser, command=DeviceCommand.SY, timeout=2.0)
+            if prompt_prefix:
                 LOGGER.info(f"Successfully connected to {port} at {BAUD_RATE} baud.")
                 return ConnectionResult(success=True, session=ConnectionSession(ser), port=port)
 

@@ -45,6 +45,7 @@ def prepare_directories(serial_number: str) -> DatabasePaths:
             warning_message = f"{dir_name} directory was missing from: {dir_path}\nCreating directory..."
             LOGGER.warning(warning_message)
             dir_path.mkdir(parents=True, exist_ok=True)
+            LOGGER.info(f"Created missing directory: {dir_path}")
 
     return database_paths
 

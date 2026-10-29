@@ -144,7 +144,7 @@ def get_device_status(session: ConnectionSession) -> DeviceStatus:
         LOGGER.error(error_message)
         raise ValueError(error_message)
 
-    status_lines = session.send_command(DeviceCommand.SY)
+    status_lines = session.send_command(DeviceCommand.SY, timeout=0.5)
     status = DeviceStatus()
 
     if len(status_lines) < 3:

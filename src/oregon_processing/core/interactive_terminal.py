@@ -1,4 +1,7 @@
+from typing import Optional
+
 from oregon_processing.core.communication import is_valid_command
+from oregon_processing.core.connection import ConnectionSession
 from oregon_processing.util.logging_manager import get_logger
 
 LOGGER = get_logger(__name__)
@@ -12,7 +15,7 @@ except ImportError:
 class InteractiveTerminal:
     """Interactive terminal for sending commands to Oregon RFID device."""
 
-    def __init__(self, session):
+    def __init__(self, session: ConnectionSession):
         """
         Initialize the interactive terminal.
 
@@ -21,7 +24,7 @@ class InteractiveTerminal:
         session : ConnectionSession
             Connection session instance for sending commands to device.
         """
-        self._session = session
+        self._session: ConnectionSession = session
 
     def run(self):
         """
@@ -53,7 +56,8 @@ class InteractiveTerminal:
                     continue
 
                 # send command and get cleaned response
-                lines = self._session.send_raw_command(cmd)
+                lines: list[str]
+                lines, _ = self._session.send_raw_command(cmd)
                 if lines:
                     LOGGER.info("Response:\n"+"\n".join(lines))
                 else:

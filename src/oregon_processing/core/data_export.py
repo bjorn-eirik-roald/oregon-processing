@@ -37,10 +37,9 @@ def export_detection_records(dates: list[datetime], output_dir: Path,  session: 
     target_dates = set(d.strftime("%Y-%m-%d") for d in dates)
     filtered_detection_records = _filter_detection_records(response, format_info, arr_idx, target_dates)
     detection_records_by_date, unique_tags_by_date, unique_tags = _organize_detection_records(
-        filtered_detection_records,
-        arr_idx,
-        tag_idx,
-        SEPARATOR
+        filtered_detection_records=filtered_detection_records,
+        arr_idx=arr_idx,
+        tag_idx=tag_idx
     )
 
     all_dates = sorted(dates)

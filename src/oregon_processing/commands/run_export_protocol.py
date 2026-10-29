@@ -5,7 +5,6 @@ from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedEr
 
 
 def run_export_protocol():
-
     try:
         execute_export_protocol()
     except InvalidConfigError as e:
@@ -14,11 +13,12 @@ def run_export_protocol():
     except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
             ClockSyncError, ModeChangeError, FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError,
             ExportFailedError) as e:
-        print(f"\n\nAn error occurred during the export protocol\nPlease check the log file for details.\n\n")
+        print(f"\n\nExport protocol failed\nPlease check the log file for details.\n\n")
         return
     except Exception as e:
-        print(f"\n\nAn unexpected error occurred: {str(e)}\n\n")
+        print(f"\n\nExport protocol failed unexpectedly.\nAn unexpected error occurred: {str(e)}\n\n")
         return
+
     print(f"\n\nExport protocol completed successfully.\n\n")
 
 
