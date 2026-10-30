@@ -31,6 +31,7 @@ class MultiChoicePopup(Popup):
         num_sections = self._build_prompt_sections(first_section_row=0, **kwargs)
         button_defs  = [(choice, lambda c=choice: self._on_choice(c)) for choice in self._choices]
         self._build_button_section(row=num_sections, button_defs=button_defs, **kwargs)
+        self._auto_adjust_window_height()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.bind("<Escape>", lambda event: self._on_close())
@@ -43,16 +44,7 @@ class MultiChoicePopup(Popup):
 class VerticalMultiChoicePopup(MultiChoicePopup):
     """Stack buttons vertically instead of arranging them in a single row."""
 
-    DEFAULT_WINDOW_WIDTH = 500
-    DEFAULT_BASE_WINDOW_HEIGHT = 120
-
     def __init__(self, parent, choices: list[str], **kwargs):
-        if "window_height" not in kwargs:
-            base_window_height = kwargs.pop("base_window_height", self.DEFAULT_BASE_WINDOW_HEIGHT)
-            button_height = kwargs.get("button_height", StandardButtonStyle.DEFAULT_BUTTON_HEIGHT)
-            estimated_height_per_choice = (button_height * 24) + 18
-            window_height = base_window_height + len(choices) * estimated_height_per_choice
-            kwargs["window_height"] = window_height
         super().__init__(parent, choices=choices, **kwargs)
 
     def _build(self, **kwargs):
@@ -73,6 +65,7 @@ class VerticalMultiChoicePopup(MultiChoicePopup):
             button = self._build_button(label_text, callback, parent=section_frame, **kwargs)
             button.grid(row=i, column=0, padx=button_padx, pady=button_pady, sticky="ew")
 
+        self._auto_adjust_window_height()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.bind("<Escape>", lambda event: self._on_close())
 
@@ -97,7 +90,7 @@ def multi_choice_prompt(choices: list[str], **kwargs) -> str:
 
 
 def vertical_multi_choice_prompt(choices: list[str], **kwargs) -> str:
-    """Prompt with vertically stacked buttons sized to the number of choices."""
+    """Prompt with vertically stacked buttons."""
     cancel_error_message = kwargs.pop("cancel_error_message", "User cancelled the vertical multi-choice prompt.")
 
     root = get_root()

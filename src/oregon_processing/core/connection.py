@@ -35,7 +35,6 @@ def connect() -> ConnectionSession:
         except (ConnectionFailedError, NoPortsAvailableError) as exc:
             LOGGER.info("Connection attempt failed: %s", exc)
             first_attempt = False
-
             retry = confirm_prompt(
                 message=(
                     "Connection failed.\n\n"
@@ -44,6 +43,7 @@ def connect() -> ConnectionSession:
                 ),
                 title="Connection retry",
                 confirm_button_text="Retry",
+
                 cancel_button_text="Stop",
                 window_height=200,
                 window_width=450

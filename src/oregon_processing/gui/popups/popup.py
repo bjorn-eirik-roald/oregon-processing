@@ -130,6 +130,49 @@ class Popup(tk.Toplevel):
 
         return len(prompt_sections)
 
+    def _auto_adjust_window_height(self, extra_padding: int = 12, max_height: int | None = None) -> None:
+        """Expand the popup vertically if any child widget extends beyond the current bottom edge."""
+        self.update_idletasks()
+
+        root_y = self.winfo_rooty()
+        current_bottom = root_y + self.winfo_height()
+        max_content_bottom = current_bottom
+
+        widgets_to_check = []
+        stack = [self]
+        seen = set()
+
+        while stack:
+            widget = stack.pop()
+            if widget in seen:
+                continue
+            seen.add(widget)
+            try:
+                children = widget.winfo_children()
+            except Exception:
+                children = []
+            if children:
+                stack.extend(widget.winfo_children())
+            widgets_to_check.append(widget)
+
+        for widget in widgets_to_check:
+            try:
+                if not widget.winfo_viewable():
+                    continue
+                bottom = widget.winfo_rooty() + widget.winfo_height()
+                if bottom > max_content_bottom:
+                    max_content_bottom = bottom
+            except Exception:
+                continue
+
+        if max_content_bottom > current_bottom:
+            needed_height = max_content_bottom - root_y + extra_padding
+            if max_height is not None:
+                needed_height = min(needed_height, max_height)
+            self._window_height = max(self._window_height, needed_height)
+            self.minsize(self._window_width, self._window_height)
+            self.geometry(f"{self._window_width}x{self._window_height}+{self.winfo_x()}+{self.winfo_y()}")
+
     def _build_entry_section(self, row: int, **kwargs) -> tk.Frame:
 
         entry_text_font    = kwargs.get("entry_text_font")
