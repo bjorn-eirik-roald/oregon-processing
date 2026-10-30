@@ -3,7 +3,7 @@ from serial.tools import list_ports
 
 from oregon_processing.core.communication import ConnectionSession, DeviceCommand, receive_response, transmit_command
 from oregon_processing.core.device_status import clear_approved_unrecognized_status_lines
-from oregon_processing.exceptions import ConnectionFailedError, NoPortsAvailableError, UserCancelledError
+from oregon_processing.exceptions import ConnectionFailedError, NoPortsAvailableError, UserCancelledError, FirstAttemptFailedError
 from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt, multi_choice_prompt, vertical_multi_choice_prompt
 from oregon_processing.util.logging_manager import get_logger
 
@@ -22,10 +22,13 @@ def connect() -> ConnectionSession:
         try:
             selected_ports = _select_ports(first_attempt=first_attempt)
 
-            session = _attempt_connection(selected_ports)
+            session = _attempt_connection(selected_ports, first_attempt=first_attempt)
             LOGGER.info("Connection established successfully.")
             return session
 
+        except FirstAttemptFailedError as e:
+            first_attempt = False
+            continue
         except UserCancelledError:
             LOGGER.debug("User cancelled the connection flow.")
             raise
@@ -60,16 +63,16 @@ def _select_ports(first_attempt: bool = False) -> list[str]:
     LOGGER.debug("Prompting user to select port(s) for connection attempt.")
 
     if first_attempt:
-        LOGGER.debug("First attempt: default port search flow with fixed baud rate.")
-        ports = _handle_prolific_port_search()
-        if not ports:
-            error_message = "No Prolific ports found on first attempt."
+        try:
+            LOGGER.debug("First attempt: default port search flow with fixed baud rate.")
+            return _handle_prolific_port_search()
+        except NoPortsAvailableError as e:
+            error_message = "No Prolific ports found on first connection attempt."
             LOGGER.debug(error_message)
-            raise NoPortsAvailableError(error_message)
-        return ports
+            raise FirstAttemptFailedError(error_message) from e
 
     selection_options = "\nPort selection options:"
-    selection_options += "\n  - Port: select a specific port to attempt"
+    selection_options += "\n  - Manual: select a specific port to attempt"
     selection_options += "\n  - All: attempt all available ports"
     selection_options += "\n  - Prolific: search for Prolific USB serial adapter ports"
     selection_options += "\n  - Cancel: stop port selection"
@@ -78,11 +81,11 @@ def _select_ports(first_attempt: bool = False) -> list[str]:
     while True:
         try:
             choice = multi_choice_prompt(
-                choices=["Port", "All", "Prolific", "Cancel"],
+                choices=["Manual", "All", "Prolific", "Cancel"],
                 title="Select port mode",
                 prompt_section_1_prompt_text=(
                     "Choose how to select the serial port:\n\n"
-                    "• Port: pick a single port from the list of available COM ports\n"
+                    "• Manual: pick a single port from the list of available COM ports\n"
                     "• All: try every available port until connection succeeds\n"
                     "• Prolific: search for Prolific USB serial adapter ports only\n"
                     "• Cancel: stop the connection attempt"
@@ -90,13 +93,13 @@ def _select_ports(first_attempt: bool = False) -> list[str]:
                 prompt_section_1_prompt_anchor="center",
                 prompt_section_1_prompt_justify="left",
                 window_height=225,
-                window_width=450,
+                window_width=475,
             )
         except UserCancelledError:
             LOGGER.debug("User cancelled port selection from popup.")
             raise
 
-        if choice == "Port":
+        if choice == "Manual":
             LOGGER.debug("User selected option to manually select a port.")
             selected_port: str|None = _handle_manual_port_selection()
             if selected_port is None:
@@ -118,7 +121,7 @@ def _select_ports(first_attempt: bool = False) -> list[str]:
         raise UserCancelledError("User cancelled port selection.")
 
 
-def _attempt_connection(ports: list[str]) -> ConnectionSession:
+def _attempt_connection(ports: list[str], first_attempt: bool = True) -> ConnectionSession:
     """Attempt connection on a list of ports using the fixed baud rate."""
 
     connection_errors: list[str] = []
@@ -148,11 +151,16 @@ def _attempt_connection(ports: list[str]) -> ConnectionSession:
             connection_errors.append(error_message)
 
     if connection_errors:
-        raise ConnectionFailedError(
-            "Failed to connect on all attempted ports. " + " | ".join(connection_errors)
-        )
+        if first_attempt:
+            error_message = "Failed first attempt to connect:\n    -" + "\n    -".join(connection_errors)
+            LOGGER.info(error_message)
+            raise FirstAttemptFailedError(error_message)
 
-    raise ConnectionFailedError("Failed to connect on all attempted port/baud combinations.")
+        error_message = "Failed to connect on attempted ports:\n    -" + "\n    -".join(connection_errors)
+        LOGGER.error(error_message)
+        raise ConnectionFailedError(error_message)
+
+    raise Exception("Unexpected error: no connection errors recorded but connection failed.")
 
 
 def _handle_manual_port_selection() -> str|None:

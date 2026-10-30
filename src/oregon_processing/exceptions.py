@@ -3,6 +3,10 @@ class InvalidConfigError(Exception):
     """Raised when configuration file is invalid or cannot be parsed."""
     pass
 
+class FirstAttemptFailedError(Exception):
+    """Raised when the first attempt to connect to a port fails."""
+    pass
+
 class ConnectionFailedError(Exception):
     """Raised when a connection to a required service fails."""
     pass
