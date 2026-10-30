@@ -11,8 +11,9 @@ from oregon_processing.core.database_manager import (
 
 from oregon_processing.core.device_clock import ClockCheckResult
 from oregon_processing.core.device_health import DeviceHealth
-from oregon_processing.core.device_status import DeviceStatus
+from oregon_processing.core.device_mode import DeviceMode, change_mode
 from oregon_processing.core.project import open_previous_project
+from oregon_processing.gui.popups.multi_choice_popup import multi_choice_prompt
 
 from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, ConnectionFailedError, DeviceHealthError, ExportFailedError, FormatChangeError, InvalidProjectDirectoryError, ModeChangeError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
@@ -63,7 +64,27 @@ def run_export_protocol() -> None:
                 dates=export_dates,
                 output_dir=database_paths.detection_records_dir
             )
-            LOGGER.info("Export protocol completed successfully.")
+
+            mode_choice = multi_choice_prompt(
+                choices=["RUN", "STANDBY", "OFF"],
+                title="Select device mode",
+                prompt_section_1_prompt_text="Choose the device mode before ending the export protocol.",
+                prompt_section_1_prompt_anchor="center",
+                prompt_section_1_prompt_justify="center",
+                window_height=150,
+
+                window_width=400
+            )
+            mode_map = {
+                "RUN": DeviceMode.RUN,
+                "STANDBY": DeviceMode.STANDBY,
+                "OFF": DeviceMode.SLEEP,
+            }
+            target_mode = mode_map[mode_choice]
+            LOGGER.info(f"User selected device mode '{target_mode.value}'")
+            change_mode(communicator._session, target_mode)
+            LOGGER.info(f"Export protocol completed successfully. Device set to '{target_mode.value}' mode.")
+
         except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
             ClockSyncError, ModeChangeError, FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError):
             raise
