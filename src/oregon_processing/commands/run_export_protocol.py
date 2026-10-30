@@ -1,5 +1,5 @@
 from oregon_processing.core.export_protocol import run_export_protocol as execute_export_protocol
-from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
+from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError,
                                     CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError,
                                     FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError)
 
@@ -10,7 +10,7 @@ def run_export_protocol():
     except InvalidConfigError as e:
         print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file is valid, then try again.")
         return
-    except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
+    except (ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
             ClockSyncError, ModeChangeError, FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError,
             ExportFailedError) as e:
         print(f"\n\nExport protocol failed\nPlease check the log file for details.\n\n")

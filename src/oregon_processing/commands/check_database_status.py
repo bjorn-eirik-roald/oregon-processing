@@ -1,6 +1,6 @@
 from oregon_processing.core.database_manager import print_last_exported_detection_record_dates
 from oregon_processing.core.project import open_previous_project
-from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
+from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError,
                                     CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError,
                                     FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError)
 
@@ -13,7 +13,7 @@ def check_database_status():
     except InvalidConfigError as e:
         print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file is valid, then try again.")
         return
-    except (ConnectionFailedError, UnexpectedResponseError,
+    except (ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError,
             CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError,
             FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError) as e:
         print(f"\n\nAn error occurred\nPlease check the log file for details.\n\n")

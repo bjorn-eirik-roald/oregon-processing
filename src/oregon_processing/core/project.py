@@ -223,9 +223,9 @@ CACHED_PROJECT: Project = None
 def get_project() -> Project:
     global CACHED_PROJECT
     if CACHED_PROJECT is None:
-        error_msg = "Project has not been initialized. Run set_project() first."
-        LOGGER.error(error_msg)
-        raise RuntimeError(error_msg)
+        error_message = "Project has not been initialized. Run set_project() first."
+        LOGGER.error(error_message)
+        raise RuntimeError(error_message)
     return CACHED_PROJECT
 
 def set_project(project: Project):

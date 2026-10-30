@@ -2,7 +2,7 @@ from contextlib import ExitStack
 
 from pathlib import Path
 
-from oregon_processing.core.connection import ConnectionResult, connect
+from oregon_processing.core.connection import connect
 from oregon_processing.core.communication import ConnectionSession
 from oregon_processing.core.device_clock import ClockCheckResult, control_device_datetime
 from oregon_processing.core.device_mode import DeviceMode, get_current_mode
@@ -10,7 +10,7 @@ from oregon_processing.core.interactive_terminal import InteractiveTerminal
 from oregon_processing.core.device_health import DeviceHealth, check_device_health as get_device_health_report
 from oregon_processing.core.device_status import DeviceStatus, get_device_status
 from oregon_processing.core.data_export import export_detection_records
-from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import CommandTransmissionError, ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
@@ -40,20 +40,12 @@ class Communicator:
 
     def connect(self) -> None:
         try:
-            connection_result: ConnectionResult = connect()
-
-            if connection_result.success:
-
-                self._session: ConnectionSession = self._exit_stack.enter_context(connection_result.session)
-                self._post_connect_handshake()
-
-            else:
-                error_message = f"Failed to connect to Oregon device."
-                LOGGER.error(error_message)
-                raise ConnectionFailedError(error_message)
+            session = connect()
+            self._session = self._exit_stack.enter_context(session)
+            self._post_connect_handshake()
 
         # catch exceptions where logging is already made and reraise after closing exit stack
-        except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError) as e:
+        except (ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError) as e:
             if self._exit_stack:
                 self._exit_stack.close()
             raise

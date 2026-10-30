@@ -1,4 +1,4 @@
-from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, UnexpectedResponseError,
+from oregon_processing.exceptions import (InvalidConfigError, ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError,
                                     CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError)
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
@@ -15,7 +15,7 @@ def open_terminal():
     except InvalidConfigError as e:
         print(f"\n\n"+str(e) + "\n\nPlease ensure the configuration file and valid, then try again.")
         return
-    except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError) as e:
+    except (ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError, ClockSyncError, ModeChangeError) as e:
         print(f"\n\n"+"An error occurred while opening the terminal connection\nPlease check the log file for details and try again.\n\n")
         return
 

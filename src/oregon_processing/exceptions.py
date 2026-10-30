@@ -7,6 +7,10 @@ class ConnectionFailedError(Exception):
     """Raised when a connection to a required service fails."""
     pass
 
+class NoPortsAvailableError(Exception):
+    """Raised when the user does not select any serial port for a connection attempt."""
+    pass
+
 class UnexpectedResponseError(Exception):
     """Raised when an unexpected response is received from a service."""
     pass

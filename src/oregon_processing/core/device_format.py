@@ -113,7 +113,7 @@ def set_detection_record_format(session: ConnectionSession, format_string: str) 
     try:
         if any(field_name not in FORMAT_FIELD_NAMES for field_name in format_string.split()):
             unknown_cols = [field_name for field_name in format_string.split() if field_name not in FORMAT_FIELD_NAMES]
-            error_msg = f"Unknown columns in detection record format: {unknown_cols}"
+            error_message = f"Unknown columns in detection record format: {unknown_cols}"
             raise FormatChangeError(f"Unknown columns in detection record format user is trying to set: {unknown_cols}")
 
         session.send_command(DeviceCommand.FM, format_string)
@@ -130,6 +130,6 @@ def set_detection_record_format(session: ConnectionSession, format_string: str) 
         LOGGER.error(str(e))
         raise
     except Exception:
-        error_msg = f"Error setting detection record format to '{format_string}'"
-        LOGGER.error(error_msg)
+        error_message = f"Error setting detection record format to '{format_string}'"
+        LOGGER.error(error_message)
         raise

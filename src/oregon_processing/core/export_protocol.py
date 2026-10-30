@@ -15,7 +15,7 @@ from oregon_processing.core.device_mode import DeviceMode, change_mode
 from oregon_processing.core.project import open_previous_project
 from oregon_processing.gui.popups.multi_choice_popup import multi_choice_prompt
 
-from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, ConnectionFailedError, DeviceHealthError, ExportFailedError, FormatChangeError, InvalidProjectDirectoryError, ModeChangeError, NoFileSelectedError, UnexpectedResponseError, UserCancelledError
+from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, ConnectionFailedError, DeviceHealthError, ExportFailedError, FormatChangeError, InvalidProjectDirectoryError, ModeChangeError, NoFileSelectedError, NoPortsAvailableError, UnexpectedResponseError, UserCancelledError
 from oregon_processing.util.logging_manager import LoggingManager, get_logger
 LOGGER = get_logger(__name__)
 
@@ -85,7 +85,7 @@ def run_export_protocol() -> None:
             change_mode(communicator._session, target_mode)
             LOGGER.info(f"Export protocol completed successfully. Device set to '{target_mode.value}' mode.")
 
-        except (ConnectionFailedError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
+        except (ConnectionFailedError, NoPortsAvailableError, UnexpectedResponseError, CommandTransmissionError, UserCancelledError, DeviceHealthError,
             ClockSyncError, ModeChangeError, FormatChangeError, NoFileSelectedError, InvalidProjectDirectoryError, ExportFailedError):
             raise
         except Exception as e:
