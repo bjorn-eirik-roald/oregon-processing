@@ -179,28 +179,28 @@ def _print_clock_status(clock_check_result: ClockCheckResult) -> None:
     computer_tz_str = f"(UT{computer_offset_hours:+.1f})"
 
     status_message = (
-        f"Device Clock Status:\n    "
-        f"{'✓ IN SYNC' if clock_check_result.synchronized else '⚠ OUT OF SYNC'}\n"
-        f"    Device Clock Source: {sync_status_name}\n"
+        f"\n    Device Clock Status:\n"
+        f"        {'✓ IN SYNC' if clock_check_result.synchronized else '⚠ OUT OF SYNC'}\n"
+        f"        Device Clock Source: {sync_status_name}\n"
     )
 
     if device_dt:
-        status_message += f"    Device Time: {device_dt.strftime('%Y-%m-%d %H:%M:%S')} {device_tz_str}\n"
+        status_message += f"        Device Time: {device_dt.strftime('%Y-%m-%d %H:%M:%S')} {device_tz_str}\n"
     else:
         total_seconds = int(device_elapsed_time.total_seconds())
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         milliseconds = device_elapsed_time.microseconds // 1000
         status_message += (
-            f"    Device Time: elapsed-only (no absolute time): "
+            f"        Device Time: elapsed-only (no absolute time): "
             f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}\n"
         )
 
-    status_message += f"    Computer Time: {computer_dt.strftime('%Y-%m-%d %H:%M:%S')} {computer_tz_str}"
+    status_message += f"        Computer Time: {computer_dt.strftime('%Y-%m-%d %H:%M:%S')} {computer_tz_str}"
 
     if time_diff is not None and not clock_check_result.synchronized:
         status_message += (
-            f"\n    Computer/Device Time Difference: {time_diff:+.1f}s "
+            f"\n        Computer/Device Time Difference: {time_diff:+.1f}s "
             f"({abs(time_diff):.1f}s {'ahead' if time_diff > 0 else 'behind'})"
         )
 

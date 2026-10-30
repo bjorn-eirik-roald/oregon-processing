@@ -103,7 +103,7 @@ class Project:
             project_parameters = cls.prompt_project_parameters()
             message = "Creating new Oregon project with the following parameters:"
             for key, value in project_parameters.items():
-                message += f"\n\t- {key}: {value}"
+                message += f"\n    - {key}: {value}"
             LOGGER.info(message)
 
             # Create new directory for project files

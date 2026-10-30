@@ -3,6 +3,8 @@ from serial.tools import list_ports
 
 from oregon_processing.core.communication import ConnectionSession, receive_response, transmit_command
 from oregon_processing.core.device_status import clear_approved_unrecognized_status_lines
+from oregon_processing.exceptions import UserCancelledError
+from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt, multi_choice_prompt
 from oregon_processing.util.logging_manager import get_logger
 
 from oregon_processing.core.communication import DeviceCommand
@@ -47,12 +49,16 @@ def connect() -> ConnectionResult:
 
         LOGGER.info("Connection failed on all attempted port/baud combinations.")
 
-        while True:
-            retry = input("\nWould you like to retry connection? (y/n): ").strip().lower()
-            if retry in ["y", "yes", "n", "no"]:
-                break
+        retry = confirm_prompt(
+            message="Would you like to retry connection?",
+            title="Connection retry",
+            confirm_button_text="Retry",
+            cancel_button_text="Stop",
+            window_height=150,
+            window_width=400
+        )
 
-        if retry not in ["y", "yes"]:
+        if not retry:
             LOGGER.debug("User has chosen not to retry connection. Exiting connection process.")
             return result
 
@@ -67,36 +73,45 @@ def _select_ports(first_attempt: bool = False) -> list[str]:
         return _handle_prolific_port_search()
 
     selection_options = "\nPort selection options:"
-    selection_options += "\n  1. Select a specific port to attempt"
-    selection_options += "\n  2. Attempt all available ports"
-    selection_options += "\n  3. Search for Prolific USB serial adapter ports"
-    selection_options += "\n  4. Cancel port selection"
-
+    selection_options += "\n  - Port: select a specific port to attempt"
+    selection_options += "\n  - All: attempt all available ports"
+    selection_options += "\n  - Prolific: search for Prolific USB serial adapter ports"
+    selection_options += "\n  - Cancel: stop port selection"
     LOGGER.info(selection_options)
-    while True:
 
-        choice = input("\nEnter your choice (1, 2, 3, or 4): ").strip()
-        print()
+    try:
+        choice = multi_choice_prompt(
+            choices=["Port", "All", "Prolific", "Cancel"],
+            title="Select port mode",
+            prompt_section_1_prompt_text=(
+                "Choose how to select the serial port:\n\n"
+                "• Port: pick a single port from the list of available COM ports\n"
+                "• All: try every available port until connection succeeds\n"
+                "• Prolific: search for Prolific USB serial adapter ports only\n"
+                "• Cancel: stop the connection attempt"
+            ),
+            prompt_section_1_prompt_anchor="center",
+            prompt_section_1_prompt_justify="left",
+            window_height=225,
+            window_width=450,
+        )
+    except UserCancelledError:
+        LOGGER.debug("User cancelled port selection from popup.")
+        return []
 
+    if choice == "Port":
+        LOGGER.debug("User selected option to manually select a port.")
+        selected_port: str | None = _handle_manual_port_selection()
+        return [selected_port] if selected_port else []
+    if choice == "All":
+        LOGGER.debug("User selected option to attempt all available ports.")
+        return _handle_all_ports_selection()
+    if choice == "Prolific":
+        LOGGER.debug("User selected option to search for Prolific USB serial adapter ports.")
+        return _handle_prolific_port_search()
 
-        if choice == "1":
-            LOGGER.debug("User selected option to manually select a port.")
-            selected_port: str | None = _handle_manual_port_selection()
-            selected_ports: list[str] = [selected_port] if selected_port else []
-        elif choice == "2":
-            LOGGER.debug("User selected option to attempt all available ports.")
-            selected_ports: list[str] = _handle_all_ports_selection()
-        elif choice == "3":
-            LOGGER.debug("User selected option to search for Prolific USB serial adapter ports.")
-            selected_ports: list[str] = _handle_prolific_port_search()
-        elif choice == "4":
-            LOGGER.debug("User cancelled port selection.")
-            selected_ports = []
-        else:
-            print("Invalid choice. Please enter 1, 2, 3, or 4.")
-            continue
-
-        return selected_ports
+    LOGGER.debug("User cancelled port selection.")
+    return []
 
 
 def _attempt_connection(ports: list[str]) -> ConnectionResult:
@@ -138,28 +153,29 @@ def _handle_manual_port_selection() -> str | None:
         LOGGER.info("No ports available.")
         return None
 
-    selection_options = "Available ports:\n"
-    for i, port in enumerate(ports, 1):
-        selection_options += f"  {i}. {port.device} - {port.description}\n"
-    selection_options += f"  {len(ports) + 1}. Cancel and return to previous menu\n"
-    LOGGER.info(selection_options)
+    port_choices = [port.device for port in ports]
+    LOGGER.info("Available ports: %s", port_choices)
 
-    while True:
-        port_choice = input("\nSelect a port (enter number): ").strip()
-        try:
-            port_index = int(port_choice) - 1
-        except ValueError:
-            print("Invalid input. Please enter a number from the list.")
-            continue
+    try:
+        choice = multi_choice_prompt(
+            choices=port_choices + ["Cancel"],
+            title="Select port",
+            prompt_section_1_prompt_text="Choose the serial port to attempt.",
+            prompt_section_1_prompt_anchor="center",
+            prompt_section_1_prompt_justify="center",
+            window_height=300,
+            window_width=400,
+        )
+    except UserCancelledError:
+        LOGGER.debug("User cancelled manual port selection.")
+        return None
 
-        if 0 <= port_index < len(ports):
-            LOGGER.debug(f"User selected port: {ports[port_index].device} - {ports[port_index].description}")
-            return ports[port_index].device
-        if port_index == len(ports):
-            LOGGER.debug("User cancelled manual port selection.")
-            return None
+    if choice == "Cancel":
+        LOGGER.debug("User cancelled manual port selection.")
+        return None
 
-        print("Invalid selection. Please enter a number from the list.")
+    LOGGER.debug(f"User selected port: {choice}")
+    return choice
 
 
 def _handle_prolific_port_search() -> list[str]:
