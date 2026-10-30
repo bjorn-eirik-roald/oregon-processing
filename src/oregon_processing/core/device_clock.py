@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from oregon_processing.exceptions import ClockSyncError, CommandTransmissionError, UnexpectedResponseError
 from oregon_processing.core.communication import DeviceCommand, ConnectionSession
+from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt
 from oregon_processing.util.logging_manager import get_logger
 LOGGER = get_logger(__name__)
 
@@ -76,12 +77,16 @@ def _attempt_clock_sync(
     tolerance_time_diff: int,
 ) -> ClockCheckResult:
     """Prompt and optionally synchronize device clock, returning updated check result."""
-    confirm = None
-    while confirm not in ['y', 'yes', 'n', 'no']:
-        confirm = input("\nUpdate device time to match computer time? (yes/no): ").strip().lower()
-        print()
+    answer = confirm_prompt(
+        message="Update device time to match computer time?",
+        title="Synchronize device clock",
+        confirm_button_text="Yes",
+        cancel_button_text="No",
+        window_height=150,
+        window_width=400
+    )
 
-    if confirm in ['n', 'no']:
+    if not answer:
         LOGGER.debug("User selected not to sync device time.")
         return current_result
 
