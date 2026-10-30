@@ -66,7 +66,7 @@ def run_export_protocol() -> None:
             )
 
             mode_choice = multi_choice_prompt(
-                choices=["RUN", "STANDBY", "OFF"],
+                choices=["RUN", "STANDBY", "SLEEP"],
                 title="Select device mode",
                 prompt_section_1_prompt_text="Choose the device mode before ending the export protocol.",
                 prompt_section_1_prompt_anchor="center",
@@ -78,7 +78,7 @@ def run_export_protocol() -> None:
             mode_map = {
                 "RUN": DeviceMode.RUN,
                 "STANDBY": DeviceMode.STANDBY,
-                "OFF": DeviceMode.SLEEP,
+                "SLEEP": DeviceMode.SLEEP,
             }
             target_mode = mode_map[mode_choice]
             LOGGER.info(f"User selected device mode '{target_mode.value}'")

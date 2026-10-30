@@ -4,7 +4,7 @@ from serial.tools import list_ports
 from oregon_processing.core.communication import ConnectionSession, receive_response, transmit_command
 from oregon_processing.core.device_status import clear_approved_unrecognized_status_lines
 from oregon_processing.exceptions import UserCancelledError
-from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt, multi_choice_prompt
+from oregon_processing.gui.popups.multi_choice_popup import confirm_prompt, multi_choice_prompt, vertical_multi_choice_prompt
 from oregon_processing.util.logging_manager import get_logger
 
 from oregon_processing.core.communication import DeviceCommand
@@ -54,7 +54,7 @@ def connect() -> ConnectionResult:
             title="Connection retry",
             confirm_button_text="Retry",
             cancel_button_text="Stop",
-            window_height=150,
+            window_height=125,
             window_width=400
         )
 
@@ -157,14 +157,14 @@ def _handle_manual_port_selection() -> str | None:
     LOGGER.info("Available ports: %s", port_choices)
 
     try:
-        choice = multi_choice_prompt(
+        choice = vertical_multi_choice_prompt(
             choices=port_choices + ["Cancel"],
             title="Select port",
             prompt_section_1_prompt_text="Choose the serial port to attempt.",
             prompt_section_1_prompt_anchor="center",
             prompt_section_1_prompt_justify="center",
-            window_height=300,
             window_width=400,
+            base_window_height=70
         )
     except UserCancelledError:
         LOGGER.debug("User cancelled manual port selection.")
